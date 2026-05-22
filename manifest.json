@@ -1,0 +1,45 @@
+{
+  "manifest_version": 2,
+  "name": "Quick Actions Launcher",
+  "version": "1.0.0",
+  "description": "Palette comandi Spotlight-style per cercare schede, segnalibri e cronologia con una scorciatoia.",
+  "icons": {
+    "16": "icons/icon-16.svg",
+    "32": "icons/icon-32.svg",
+    "48": "icons/icon-48.svg",
+    "96": "icons/icon-96.svg"
+  },
+  "permissions": [
+    "tabs",
+    "bookmarks",
+    "history",
+    "activeTab",
+    "storage"
+  ],
+  "background": {
+    "scripts": ["src/search-utils.js", "background/background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/search-utils.js", "content/launcher.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "commands": {
+    "toggle-launcher": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Space",
+        "mac": "MacCtrl+Shift+Space"
+      },
+      "description": "Apri/chiudi Quick Actions Launcher"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "quick-actions-launcher@extension",
+      "strict_min_version": "91.0"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+.env
+*.log
+*.zip
+*.xpi
+.DS_Store
+Thumbs.db
+doc_progetto/
+docs/
