@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, createElement, renderResults, renderEmpty, renderLoading, renderError, updateSelection, reindexItems */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, createElement, renderResults, renderGroupedResults, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig */
 
 (function () {
   "use strict";
@@ -7,6 +7,7 @@
 
   const state = {
     isVisible: false,
+    isGroupedView: false,
     results: { tabs: [], bookmarks: [], history: [] },
     selectedIndex: -1,
     flatResults: [],
@@ -87,6 +88,8 @@
       "launcher.footer.navigate",
       "launcher.footer.open",
       "launcher.footer.newTab",
+      "launcher.footer.commands",
+      "launcher.footer.group",
       "launcher.footer.fulltext",
       "launcher.footer.close",
     ];
@@ -176,6 +179,9 @@
     updateFulltextToggleState(state.elements.fulltextToggle);
     renderEmpty(state.elements.results);
 
+    fetchRecentTabs();
+    checkDuplicates();
+
     requestAnimationFrame(() => {
       state.elements.input.focus();
       state.elements.input.select();
@@ -192,6 +198,48 @@
     state.flatResults = [];
   }
 
+  async function fetchRecentTabs() {
+    try {
+      const recentData = await browser.runtime.sendMessage({
+        action: "get-recent-tabs",
+      });
+      if (!state.isVisible || state.elements.input.value.trim()) return;
+      renderRecentTabs(state.elements.results, recentData);
+      state.flatResults = [
+        ...recentData.recentActive.map((item) => ({
+          ...item,
+          type: "recent-active",
+        })),
+        ...recentData.recentlyClosed.map((item) => ({
+          ...item,
+          type: "recent-closed",
+        })),
+      ];
+      state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
+      if (state.selectedIndex >= 0) {
+        updateSelection(state.elements.results, state.selectedIndex);
+      }
+    } catch {
+      // Recent tabs not available
+    }
+  }
+
+  async function checkDuplicates() {
+    try {
+      const result = await browser.runtime.sendMessage({
+        action: "get-duplicate-count",
+      });
+      if (!state.isVisible || result.count <= 0) return;
+      renderDuplicateBanner(state.elements.results, result.count);
+    } catch {
+      // Duplicate check not available
+    }
+  }
+
+  function isCommandMode(query) {
+    return query.trimStart().startsWith(">");
+  }
+
   function handleInput() {
     clearTimeout(state.searchTimeout);
     clearTimeout(state.loadingTimeout);
@@ -199,6 +247,14 @@
 
     if (!query.trim()) {
       renderEmpty(state.elements.results);
+      state.flatResults = [];
+      state.selectedIndex = -1;
+      fetchRecentTabs();
+      return;
+    }
+
+    if (isCommandMode(query)) {
+      handleCommandInput(query.trimStart().slice(1));
       return;
     }
 
@@ -216,12 +272,7 @@
         state.results = results;
         state.flatResults = buildFlatResults(results);
         state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
-        renderResults(
-          state.elements.results,
-          results,
-          query,
-          state.selectedIndex,
-        );
+        renderCurrentView(query);
       } catch (err) {
         clearTimeout(state.loadingTimeout);
         console.error("Quick Actions Launcher: search error", err);
@@ -230,10 +281,54 @@
     }, QAL_CONFIG.DEBOUNCE_MS);
   }
 
+  function handleCommandInput(query) {
+    const commands = filterCommands(query);
+    state.flatResults = commands.map((cmd) => ({ ...cmd, type: "command" }));
+    state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
+    renderCommandResults(
+      state.elements.results,
+      commands,
+      query,
+      state.selectedIndex,
+    );
+  }
+
+  function renderCurrentView(query) {
+    if (state.isGroupedView) {
+      renderGroupedResults(
+        state.elements.results,
+        state.results,
+        query,
+        state.selectedIndex,
+      );
+    } else {
+      renderResults(
+        state.elements.results,
+        state.results,
+        query,
+        state.selectedIndex,
+      );
+    }
+  }
+
+  function toggleGroupedView() {
+    state.isGroupedView = !state.isGroupedView;
+    const query = state.elements.input.value;
+    if (query.trim() && !isCommandMode(query)) {
+      renderCurrentView(query);
+    }
+  }
+
   function handleKeydown(e) {
     if (e.altKey && (e.key === "c" || e.key === "C")) {
       e.preventDefault();
       toggleFulltextSearch();
+      return;
+    }
+
+    if (e.altKey && (e.key === "g" || e.key === "G")) {
+      e.preventDefault();
+      toggleGroupedView();
       return;
     }
 
@@ -279,12 +374,24 @@
   }
 
   function navigateTo(item, forceNewTab) {
-    if (item.type === "tab") {
+    if (item.type === "tab" || item.type === "recent-active") {
       browser.runtime.sendMessage({
         action: "navigate",
         type: "tab",
         tabId: item.id,
       });
+    } else if (item.type === "recent-closed") {
+      browser.runtime.sendMessage({
+        action: "restore-session",
+        sessionId: item.sessionId,
+      });
+      closeLauncher();
+    } else if (item.type === "command") {
+      browser.runtime.sendMessage({
+        action: "execute-command",
+        commandId: item.id,
+      });
+      closeLauncher();
     } else {
       browser.runtime.sendMessage({
         action: "navigate",
@@ -303,6 +410,32 @@
       const tabId = Number(itemEl.dataset.id);
       browser.runtime.sendMessage({ action: "close-tab", tabId });
       removeResultItem(itemEl, tabId);
+      return;
+    }
+
+    const domainCloseAll = e.target.closest(".qal-domain-close-all");
+    if (domainCloseAll) {
+      e.stopPropagation();
+      browser.runtime.sendMessage({
+        action: "close-domain-tabs",
+        domain: domainCloseAll.dataset.domain,
+      });
+      setTimeout(retriggerSearch, 200);
+      return;
+    }
+
+    const domainHeader = e.target.closest(".qal-domain-header");
+    if (domainHeader && !e.target.closest("button")) {
+      domainHeader.parentElement.classList.toggle("qal-collapsed");
+      return;
+    }
+
+    const dupAction = e.target.closest(".qal-duplicate-action");
+    if (dupAction) {
+      e.stopPropagation();
+      browser.runtime.sendMessage({ action: "close-duplicates" });
+      const banner = dupAction.closest(".qal-duplicate-banner");
+      if (banner) banner.remove();
       return;
     }
 

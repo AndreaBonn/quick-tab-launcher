@@ -96,6 +96,24 @@ function buildFlatResults(results) {
   return flat;
 }
 
+function groupTabsByDomain(tabs) {
+  const groups = new Map();
+  for (const tab of tabs) {
+    let domain;
+    try {
+      domain = new URL(tab.url).hostname;
+    } catch {
+      domain = "other";
+    }
+    if (!groups.has(domain)) groups.set(domain, []);
+    groups.get(domain).push(tab);
+  }
+  return Array.from(groups, ([domain, domainTabs]) => ({
+    domain,
+    tabs: domainTabs,
+  }));
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     QAL_CONFIG,
@@ -106,5 +124,6 @@ if (typeof module !== "undefined" && module.exports) {
     deduplicateResults,
     normalizeUrl,
     buildFlatResults,
+    groupTabsByDomain,
   };
 }

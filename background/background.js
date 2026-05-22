@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, fuzzyScore, deduplicateResults, executeCommand, getDuplicateCount, getRecentTabs, restoreSession, closeDomainTabs */
 
 const PRIVILEGED_URL_PATTERNS = [
   /^about:/,
@@ -23,7 +23,7 @@ async function updatePopupForTab(tabId) {
       await browser.browserAction.setPopup({ popup: "" });
     }
   } catch {
-    // Tab might not exist anymore — ignore silently
+    // Tab might not exist anymore
   }
 }
 
@@ -102,6 +102,42 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
+  if (message.action === "get-recent-tabs") {
+    getRecentTabs().then(sendResponse);
+    return true;
+  }
+
+  if (message.action === "restore-session") {
+    restoreSession(message.sessionId);
+    return false;
+  }
+
+  if (message.action === "get-duplicate-count") {
+    getDuplicateCount().then((count) => sendResponse({ count }));
+    return true;
+  }
+
+  if (message.action === "close-duplicates") {
+    const { closeDuplicateTabs } =
+      typeof module !== "undefined"
+        ? require("./tab-commands.js")
+        : { closeDuplicateTabs: globalThis.closeDuplicateTabs };
+    if (typeof closeDuplicateTabs === "function") {
+      closeDuplicateTabs();
+    }
+    return false;
+  }
+
+  if (message.action === "execute-command") {
+    executeCommand(message.commandId).then(sendResponse);
+    return true;
+  }
+
+  if (message.action === "close-domain-tabs") {
+    closeDomainTabs(message.domain);
+    return false;
+  }
+
   return false;
 });
 
@@ -119,11 +155,24 @@ async function handleSearch(query, senderWindowId) {
 }
 
 function filterTabsByTitleUrl(tabs, query) {
-  return tabs.filter(
-    (tab) =>
+  const results = [];
+
+  for (const tab of tabs) {
+    const match =
+      typeof fuzzyScore === "function" ? fuzzyScore(tab, query) : null;
+
+    if (match) {
+      results.push({ tab, score: match.score });
+    } else if (
       tab.title?.toLowerCase().includes(query) ||
-      tab.url?.toLowerCase().includes(query),
-  );
+      tab.url?.toLowerCase().includes(query)
+    ) {
+      results.push({ tab, score: 0 });
+    }
+  }
+
+  results.sort((a, b) => b.score - a.score);
+  return results.map((r) => r.tab);
 }
 
 function formatTabResult(tab, currentWindowId, isContentMatch) {

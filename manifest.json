@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Quick Actions Launcher",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Palette comandi Spotlight-style per cercare schede, segnalibri e cronologia con una scorciatoia.",
   "icons": {
     "16": "icons/icon-16.svg",
@@ -20,6 +20,7 @@
     "tabs",
     "bookmarks",
     "history",
+    "sessions",
     "activeTab",
     "storage",
     "<all_urls>"
@@ -32,7 +33,10 @@
     "scripts": [
       "src/config-storage.js",
       "src/search-utils.js",
+      "src/fuzzy.js",
       "src/i18n.js",
+      "src/commands.js",
+      "background/tab-commands.js",
       "background/background.js"
     ],
     "persistent": false
@@ -43,7 +47,9 @@
       "js": [
         "src/config-storage.js",
         "src/search-utils.js",
+        "src/fuzzy.js",
         "src/i18n.js",
+        "src/commands.js",
         "src/render-utils.js",
         "content/launcher.js"
       ],

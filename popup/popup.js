@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderResults, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderResults, renderRecentTabs, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange, filterCommands, renderCommandResults */
 
 const state = {
   results: { tabs: [], bookmarks: [], history: [] },
@@ -34,6 +34,8 @@ function init() {
   renderEmpty(results);
   input.focus();
 
+  fetchRecentTabs();
+
   input.addEventListener("input", handleInput);
   input.addEventListener("keydown", handleKeydown);
   results.addEventListener("click", handleResultClick);
@@ -46,6 +48,36 @@ function init() {
   });
 }
 
+async function fetchRecentTabs() {
+  try {
+    const recentData = await browser.runtime.sendMessage({
+      action: "get-recent-tabs",
+    });
+    if (state.elements.input.value.trim()) return;
+    renderRecentTabs(state.elements.results, recentData);
+    state.flatResults = [
+      ...recentData.recentActive.map((item) => ({
+        ...item,
+        type: "recent-active",
+      })),
+      ...recentData.recentlyClosed.map((item) => ({
+        ...item,
+        type: "recent-closed",
+      })),
+    ];
+    state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
+    if (state.selectedIndex >= 0) {
+      updateSelection(state.elements.results, state.selectedIndex);
+    }
+  } catch {
+    // Recent tabs not available
+  }
+}
+
+function isCommandMode(query) {
+  return query.trimStart().startsWith(">");
+}
+
 function handleInput() {
   clearTimeout(state.searchTimeout);
   clearTimeout(state.loadingTimeout);
@@ -53,6 +85,22 @@ function handleInput() {
 
   if (!query.trim()) {
     renderEmpty(state.elements.results);
+    state.flatResults = [];
+    state.selectedIndex = -1;
+    fetchRecentTabs();
+    return;
+  }
+
+  if (isCommandMode(query)) {
+    const commands = filterCommands(query.trimStart().slice(1));
+    state.flatResults = commands.map((cmd) => ({ ...cmd, type: "command" }));
+    state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
+    renderCommandResults(
+      state.elements.results,
+      commands,
+      query.trimStart().slice(1),
+      state.selectedIndex,
+    );
     return;
   }
 
@@ -129,11 +177,21 @@ function selectPrev() {
 }
 
 function navigateTo(item, forceNewTab) {
-  if (item.type === "tab") {
+  if (item.type === "tab" || item.type === "recent-active") {
     browser.runtime.sendMessage({
       action: "navigate",
       type: "tab",
       tabId: item.id,
+    });
+  } else if (item.type === "recent-closed") {
+    browser.runtime.sendMessage({
+      action: "restore-session",
+      sessionId: item.sessionId,
+    });
+  } else if (item.type === "command") {
+    browser.runtime.sendMessage({
+      action: "execute-command",
+      commandId: item.id,
     });
   } else {
     browser.runtime.sendMessage({
@@ -167,7 +225,7 @@ function handleResultClick(e) {
 }
 
 function removeResultItem(itemEl, tabId) {
-  state.results.tabs = state.results.tabs.filter((t) => t.id !== tabId);
+  state.results.tabs = state.results.tabs.filter((tab) => tab.id !== tabId);
   state.flatResults = buildFlatResults(state.results);
   itemEl.remove();
 
