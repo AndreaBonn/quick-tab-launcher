@@ -1,7 +1,16 @@
 /* global escapeHtml, highlightMatch, formatUrl, t */
 
-const FAVICON_FALLBACK_BASE =
-  "https://www.google.com/s2/favicons?sz=16&domain=";
+const INITIAL_COLORS = [
+  "#e06c75",
+  "#e5c07b",
+  "#61afef",
+  "#c678dd",
+  "#56b6c2",
+  "#98c379",
+  "#d19a66",
+  "#be5046",
+];
+
 const SECTION_KEYS = ["tabs", "bookmarks", "history"];
 const SECTION_ICONS = {
   tabs: "\uD83D\uDCC2",
@@ -27,25 +36,44 @@ function createSectionHeader(sectionKey, count) {
   return header;
 }
 
+function hashCode(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function createInitialFavicon(hostname) {
+  const letter = (hostname.replace(/^www\./, "")[0] || "?").toUpperCase();
+  const color = INITIAL_COLORS[hashCode(hostname) % INITIAL_COLORS.length];
+  const el = createElement("span", "qal-favicon qal-favicon-initial");
+  el.textContent = letter;
+  el.style.backgroundColor = color;
+  return el;
+}
+
 function createFavicon(item, sectionKey) {
-  const favicon = document.createElement("img");
-  favicon.className = "qal-favicon";
-  favicon.width = 16;
-  favicon.height = 16;
   if (sectionKey === "tabs" && item.favIconUrl) {
-    favicon.src = item.favIconUrl;
-  } else if (item.url) {
+    const img = document.createElement("img");
+    img.className = "qal-favicon";
+    img.width = 16;
+    img.height = 16;
+    img.src = item.favIconUrl;
+    img.onerror = () => {
+      img.style.display = "none";
+    };
+    return img;
+  }
+  if (item.url) {
     try {
       const hostname = new URL(item.url).hostname;
-      favicon.src = FAVICON_FALLBACK_BASE + hostname;
+      return createInitialFavicon(hostname);
     } catch {
-      favicon.src = "";
+      // invalid URL: fall through
     }
   }
-  favicon.onerror = () => {
-    favicon.style.display = "none";
-  };
-  return favicon;
+  return createElement("span", "qal-favicon");
 }
 
 function createResultText(item, query) {

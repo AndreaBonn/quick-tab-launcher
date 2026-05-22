@@ -898,7 +898,7 @@ describe("launcher.js - createFavicon with invalid URL", () => {
 
     const favicon = items[0].querySelector(".qal-favicon");
     expect(favicon).toBeTruthy();
-    expect(favicon.src === "" || favicon.getAttribute("src") === "").toBe(true);
+    expect(favicon.tagName).toBe("SPAN");
   });
 });
 

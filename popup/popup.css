@@ -143,6 +143,16 @@ body {
   border-radius: 2px;
 }
 
+.qal-favicon-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
+
 .qal-result-text {
   flex: 1;
   min-width: 0;
