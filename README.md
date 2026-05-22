@@ -69,6 +69,11 @@ quick-tab-launcher__firefox/
 │   ├── options.html          # Settings page UI
 │   ├── options.js            # Settings load/save/reset logic
 │   └── options.css           # Settings page styles (light/dark)
+├── popup/
+│   ├── popup.html            # Compact popup fallback for privileged pages
+│   ├── popup.js              # Popup interaction logic
+│   ├── popup-render.js       # Popup DOM rendering functions
+│   └── popup.css             # Popup styles (light/dark)
 ├── icons/                    # SVG icons (16/32/48/96)
 ├── tests/
 │   ├── search-utils.test.js  # Pure function tests, no mocks
@@ -115,6 +120,8 @@ Package the extension into an `.xpi` file and install it through Firefox Add-ons
 | Close a tab from results | Click the X button on tab results  |
 | Dismiss the launcher     | `Escape` or click the backdrop     |
 
+The keyboard shortcut opens the full-screen overlay on regular pages. On privileged pages (`about:`, `moz-extension:`, `file:`), clicking the toolbar icon opens a compact popup fallback with identical functionality.
+
 Bookmarks and history search activate after 2+ characters. Results are capped at 5 per category and deduplicated across sources (tabs take priority over bookmarks, bookmarks over history).
 
 Tab search spans all open windows. Tabs from other windows display a badge to distinguish them from the current window.
@@ -137,10 +144,6 @@ Right-click the extension icon and select "Options" (or go to `about:addons` and
 Settings are persisted in `browser.storage.local` and applied in real-time without reloading the extension.
 
 When full-text search is enabled, tabs whose page content matches the query are included in results with a content badge. Title/URL matches always appear first. Content extraction is skipped for privileged pages where script injection is not allowed.
-
-## Known limitations
-
-- Does not work on `about:`, `moz-extension:`, or `file:` pages (Firefox WebExtension restriction)
 
 ## Testing
 

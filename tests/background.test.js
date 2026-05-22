@@ -18,6 +18,7 @@ function createBrowserMock() {
     },
     browserAction: {
       onClicked: { addListener: vi.fn() },
+      setPopup: vi.fn().mockResolvedValue(undefined),
     },
     runtime: {
       onMessage: { addListener: vi.fn() },
@@ -33,9 +34,13 @@ function createBrowserMock() {
       query: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockResolvedValue({}),
-      get: vi.fn().mockResolvedValue({ windowId: 1 }),
+      get: vi
+        .fn()
+        .mockResolvedValue({ windowId: 1, url: "https://example.com" }),
       create: vi.fn().mockResolvedValue({}),
       remove: vi.fn().mockResolvedValue(undefined),
+      onActivated: { addListener: vi.fn() },
+      onUpdated: { addListener: vi.fn() },
     },
     bookmarks: {
       search: vi.fn().mockResolvedValue([]),
@@ -82,6 +87,12 @@ function loadBackground(browserMock) {
   if (bg && bg.extractTabContent) {
     globalThis.extractTabContent = bg.extractTabContent;
   }
+  if (bg && bg.isPrivilegedUrl) {
+    globalThis.isPrivilegedUrl = bg.isPrivilegedUrl;
+  }
+  if (bg && bg.updatePopupForTab) {
+    globalThis.updatePopupForTab = bg.updatePopupForTab;
+  }
 
   const commandListener =
     browserMock.commands.onCommand.addListener.mock.calls[0][0];
@@ -89,8 +100,24 @@ function loadBackground(browserMock) {
     browserMock.runtime.onMessage.addListener.mock.calls[0][0];
   const browserActionListener =
     browserMock.browserAction.onClicked.addListener.mock.calls[0][0];
+  const tabActivatedListener =
+    browserMock.tabs.onActivated.addListener.mock.calls[0]?.[0];
+  const tabUpdatedListener =
+    browserMock.tabs.onUpdated.addListener.mock.calls[0]?.[0];
 
-  return { commandListener, messageListener, browserActionListener };
+  // Reset call history accumulated during module load (init queries, etc.)
+  // so individual tests can assert cleanly on their own interactions.
+  browserMock.tabs.query.mockClear();
+  browserMock.tabs.sendMessage.mockClear();
+  browserMock.browserAction.setPopup.mockClear();
+
+  return {
+    commandListener,
+    messageListener,
+    browserActionListener,
+    tabActivatedListener,
+    tabUpdatedListener,
+  };
 }
 
 describe("background.js - command listener", () => {
@@ -746,5 +773,116 @@ describe("background.js - close-tab handler", () => {
       vi.fn(),
     );
     expect(result).toBe(false);
+  });
+});
+
+describe("background.js - isPrivilegedUrl", () => {
+  beforeEach(() => {
+    const browserMock = createBrowserMock();
+    loadBackground(browserMock);
+  });
+
+  it("returns true for about: URLs", () => {
+    expect(globalThis.isPrivilegedUrl("about:config")).toBe(true);
+    expect(globalThis.isPrivilegedUrl("about:blank")).toBe(true);
+  });
+
+  it("returns true for moz-extension: URLs", () => {
+    expect(
+      globalThis.isPrivilegedUrl("moz-extension://fake-id/page.html"),
+    ).toBe(true);
+  });
+
+  it("returns true for file: URLs", () => {
+    expect(globalThis.isPrivilegedUrl("file:///home/user/doc.html")).toBe(true);
+  });
+
+  it("returns true for chrome: URLs", () => {
+    expect(globalThis.isPrivilegedUrl("chrome://newtab")).toBe(true);
+  });
+
+  it("returns true for resource: URLs", () => {
+    expect(globalThis.isPrivilegedUrl("resource://gre/")).toBe(true);
+  });
+
+  it("returns true for data: URLs", () => {
+    expect(globalThis.isPrivilegedUrl("data:text/html,<h1>Hi</h1>")).toBe(true);
+  });
+
+  it("returns false for https: URLs", () => {
+    expect(globalThis.isPrivilegedUrl("https://example.com")).toBe(false);
+  });
+
+  it("returns false for http: URLs", () => {
+    expect(globalThis.isPrivilegedUrl("http://localhost:3000")).toBe(false);
+  });
+
+  it("returns true for undefined", () => {
+    expect(globalThis.isPrivilegedUrl(undefined)).toBe(true);
+  });
+
+  it("returns true for null", () => {
+    expect(globalThis.isPrivilegedUrl(null)).toBe(true);
+  });
+
+  it("returns true for empty string", () => {
+    expect(globalThis.isPrivilegedUrl("")).toBe(true);
+  });
+});
+
+describe("background.js - updatePopupForTab", () => {
+  let browserMock;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    loadBackground(browserMock);
+  });
+
+  it("sets popup to popup.html for privileged tab", async () => {
+    browserMock.tabs.get.mockResolvedValue({ url: "about:config" });
+    await globalThis.updatePopupForTab(1);
+    expect(browserMock.browserAction.setPopup).toHaveBeenCalledWith({
+      popup: "popup/popup.html",
+    });
+  });
+
+  it("sets popup to empty string for normal tab", async () => {
+    browserMock.tabs.get.mockResolvedValue({ url: "https://example.com" });
+    await globalThis.updatePopupForTab(42);
+    expect(browserMock.browserAction.setPopup).toHaveBeenCalledWith({
+      popup: "",
+    });
+  });
+
+  it("does not throw when tab does not exist", async () => {
+    browserMock.tabs.get.mockRejectedValue(new Error("No such tab"));
+    await expect(globalThis.updatePopupForTab(999)).resolves.toBeUndefined();
+  });
+});
+
+describe("background.js - handleNavigate with undefined senderTabId", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ messageListener } = loadBackground(browserMock));
+  });
+
+  it("does not call sendMessage when senderTabId is undefined (popup caller)", async () => {
+    messageListener(
+      { action: "navigate", type: "tab", tabId: 5 },
+      { tab: undefined },
+      vi.fn(),
+    );
+
+    await vi.waitFor(() =>
+      expect(browserMock.tabs.update).toHaveBeenCalledWith(5, { active: true }),
+    );
+
+    const sendMessageCalls = browserMock.tabs.sendMessage.mock.calls;
+    expect(sendMessageCalls.every((call) => call[1]?.action !== "close")).toBe(
+      true,
+    );
   });
 });

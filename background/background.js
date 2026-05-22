@@ -1,5 +1,32 @@
 /* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY */
 
+const PRIVILEGED_URL_PATTERNS = [
+  /^about:/,
+  /^moz-extension:/,
+  /^file:/,
+  /^chrome:/,
+  /^resource:/,
+  /^data:/,
+];
+
+function isPrivilegedUrl(url) {
+  if (!url) return true;
+  return PRIVILEGED_URL_PATTERNS.some((pattern) => pattern.test(url));
+}
+
+async function updatePopupForTab(tabId) {
+  try {
+    const tab = await browser.tabs.get(tabId);
+    if (isPrivilegedUrl(tab.url)) {
+      await browser.browserAction.setPopup({ popup: "popup/popup.html" });
+    } else {
+      await browser.browserAction.setPopup({ popup: "" });
+    }
+  } catch {
+    // Tab might not exist anymore — ignore silently
+  }
+}
+
 async function initConfig() {
   const userConfig = await loadUserConfig();
   const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
@@ -37,6 +64,27 @@ browser.browserAction.onClicked.addListener(async () => {
   await toggleLauncher();
 });
 
+browser.tabs.onActivated.addListener((activeInfo) => {
+  updatePopupForTab(activeInfo.tabId);
+});
+
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  if (!changeInfo.url) return;
+  const [activeTab] = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  if (activeTab?.id === tabId) {
+    updatePopupForTab(tabId);
+  }
+});
+
+browser.tabs
+  .query({ active: true, currentWindow: true })
+  .then(([activeTab]) => {
+    if (activeTab?.id) updatePopupForTab(activeTab.id);
+  });
+
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "search") {
     const senderWindowId = sender.tab?.windowId;
@@ -45,7 +93,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "navigate") {
-    handleNavigate(message, sender.tab.id);
+    handleNavigate(message, sender.tab?.id);
     return false;
   }
 
@@ -193,7 +241,9 @@ async function handleNavigate(message, senderTabId) {
         await browser.tabs.create({ url: message.url, active: true });
       }
     }
-    await browser.tabs.sendMessage(senderTabId, { action: "close" });
+    if (senderTabId) {
+      await browser.tabs.sendMessage(senderTabId, { action: "close" });
+    }
   } catch (err) {
     console.log("Quick Actions Launcher: navigazione fallita", err.message);
   }
@@ -217,5 +267,5 @@ function extractDomain(url) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { extractTabContent };
+  module.exports = { extractTabContent, isPrivilegedUrl, updatePopupForTab };
 }

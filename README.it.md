@@ -69,6 +69,11 @@ quick-tab-launcher__firefox/
 │   ├── options.html          # UI pagina impostazioni
 │   ├── options.js            # Logica caricamento/salvataggio/reset
 │   └── options.css           # Stili pagina impostazioni (chiaro/scuro)
+├── popup/
+│   ├── popup.html            # Popup compatto per pagine privilegiate
+│   ├── popup.js              # Logica interazione popup
+│   ├── popup-render.js       # Funzioni rendering DOM popup
+│   └── popup.css             # Stili popup (chiaro/scuro)
 ├── icons/                    # Icone SVG (16/32/48/96)
 ├── tests/
 │   ├── search-utils.test.js  # Test funzioni pure, nessun mock
@@ -115,6 +120,8 @@ Pacchettizza l'estensione in un file `.xpi` e installala tramite i componenti ag
 | Chiudi una scheda dai risultati | Clicca il pulsante X sui risultati tab |
 | Chiudi il launcher              | `Escape` o clicca sullo sfondo         |
 
+La scorciatoia da tastiera apre l'overlay a schermo intero sulle pagine normali. Sulle pagine privilegiate (`about:`, `moz-extension:`, `file:`), il click sull'icona nella toolbar apre un popup compatto con le stesse funzionalita.
+
 La ricerca in segnalibri e cronologia si attiva dopo 2+ caratteri. I risultati sono limitati a 5 per categoria e deduplicati tra le fonti (le schede hanno priorita sui segnalibri, i segnalibri sulla cronologia).
 
 La ricerca schede copre tutte le finestre aperte. Le schede provenienti da altre finestre mostrano un badge per distinguerle.
@@ -137,10 +144,6 @@ Clicca col tasto destro sull'icona dell'estensione e seleziona "Opzioni" (oppure
 Le impostazioni sono salvate in `browser.storage.local` e applicate in tempo reale senza ricaricare l'estensione.
 
 Quando la ricerca nel contenuto e attiva, le schede il cui testo corrisponde alla query vengono incluse nei risultati con un badge contenuto. I match per titolo/URL appaiono sempre prima. L'estrazione del contenuto viene saltata per le pagine privilegiate dove l'iniezione di script non e consentita.
-
-## Limitazioni note
-
-- Non funziona su pagine `about:`, `moz-extension:`, `file:` (restrizione WebExtension Firefox)
 
 ## Testing
 
