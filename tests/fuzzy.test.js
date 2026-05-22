@@ -33,6 +33,17 @@ describe("fuzzyMatch", () => {
     expect(result.indices).toEqual([0, 1, 2]);
   });
 
+  it("finds capitalized Tag when searching lowercase tag", () => {
+    const result = fuzzyMatch("Tag Manager", "tag");
+    expect(result).not.toBeNull();
+    expect(result.indices).toEqual([0, 1, 2]);
+  });
+
+  it("finds lowercase tag when searching uppercase TAG", () => {
+    const result = fuzzyMatch("price tag label", "TAG");
+    expect(result).not.toBeNull();
+  });
+
   it("returns null when query does not match", () => {
     expect(fuzzyMatch("Hello", "xyz")).toBeNull();
   });
@@ -73,7 +84,9 @@ describe("fuzzyMatch", () => {
 
   it("gives consecutive bonus for adjacent matches", () => {
     const result = fuzzyMatch("abc", "ab");
-    expect(result.score).toBe(FUZZY_BONUS_WORD_BOUNDARY + FUZZY_BONUS_CONSECUTIVE);
+    expect(result.score).toBe(
+      FUZZY_BONUS_WORD_BOUNDARY + FUZZY_BONUS_CONSECUTIVE,
+    );
   });
 
   it("gives base bonus for isolated mid-word match", () => {
@@ -156,9 +169,7 @@ describe("highlightFuzzyMatch", () => {
 
   it("groups consecutive matches in one mark tag", () => {
     const result = highlightFuzzyMatch("Hello", [0, 1, 2]);
-    expect(result).toBe(
-      '<mark class="qal-highlight">Hel</mark>lo',
-    );
+    expect(result).toBe('<mark class="qal-highlight">Hel</mark>lo');
   });
 
   it("escapes HTML in text", () => {
