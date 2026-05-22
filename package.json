@@ -1,6 +1,6 @@
 {
   "name": "quick-actions-launcher",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Firefox extension: Spotlight-style command palette for tabs, bookmarks, and history.",
   "scripts": {
