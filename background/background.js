@@ -7,6 +7,8 @@ const PRIVILEGED_URL_PATTERNS = [
   /^chrome:/,
   /^resource:/,
   /^data:/,
+  /^javascript:/i,
+  /^vbscript:/i,
 ];
 
 function isPrivilegedUrl(url) {
@@ -286,6 +288,7 @@ async function handleNavigate(message, senderTabId) {
       const tab = await browser.tabs.get(message.tabId);
       await browser.windows.update(tab.windowId, { focused: true });
     } else if (message.type === "bookmark" || message.type === "history") {
+      if (isPrivilegedUrl(message.url)) return;
       if (message.openInCurrent) {
         await browser.tabs.update(senderTabId, { url: message.url });
       } else {
