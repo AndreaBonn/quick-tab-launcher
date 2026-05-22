@@ -4,6 +4,7 @@
 
 A Firefox extension that adds a Spotlight-style command palette for searching open tabs, bookmarks, and browsing history from a single keyboard shortcut.
 
+[![Install from AMO](https://img.shields.io/badge/Firefox_Add--ons-Install-ff7139?logo=firefoxbrowser)](https://addons.mozilla.org/it/firefox/addon/quick-tab-launcher/)
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![JavaScript](https://img.shields.io/badge/javascript-ES2020+-f7df1e)
 ![Firefox](https://img.shields.io/badge/firefox-%3E%3D91-ff7139)
@@ -98,6 +99,10 @@ quick-tab-launcher__firefox/
 
 ## Installation
 
+### From Firefox Add-ons (recommended)
+
+Install directly from the [Firefox Add-ons store](https://addons.mozilla.org/it/firefox/addon/quick-tab-launcher/).
+
 ### From source (development)
 
 1. Clone the repository
@@ -107,10 +112,6 @@ quick-tab-launcher__firefox/
    ```
 3. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
 4. Click "Load Temporary Add-on" and select the `manifest.json` file from the project root
-
-### As a permanent extension
-
-Package the extension into an `.xpi` file and install it through Firefox Add-ons. The extension requires the following permissions: tabs, bookmarks, history, activeTab, storage.
 
 ## Usage
 

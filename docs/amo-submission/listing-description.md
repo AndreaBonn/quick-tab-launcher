@@ -1,4 +1,6 @@
-# AMO Listing Description - Quick TAB Launcher by Bonn
+# AMO Listing Description - Quick Tab Launcher
+
+**Published at:** https://addons.mozilla.org/it/firefox/addon/quick-tab-launcher/
 
 ## Short description (for manifest / AMO summary, max 132 chars)
 
