@@ -205,7 +205,10 @@ async function extractTabContent(tabId) {
 
 async function fetchTabsContent(tabs) {
   const entries = await Promise.all(
-    tabs.map(async (tab) => [tab.id, await extractTabContent(tab.id)]),
+    tabs.map(async (tab) => {
+      if (isPrivilegedUrl(tab.url)) return [tab.id, ""];
+      return [tab.id, await extractTabContent(tab.id)];
+    }),
   );
   return new Map(entries);
 }

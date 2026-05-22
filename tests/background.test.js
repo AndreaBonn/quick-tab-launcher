@@ -729,9 +729,9 @@ describe("background.js - fulltext search", () => {
         windowId: 1,
       },
     ]);
-    browserMock.tabs.executeScript
-      .mockRejectedValueOnce(new Error("Restricted"))
-      .mockResolvedValueOnce(["contains the search content here"]);
+    browserMock.tabs.executeScript.mockResolvedValueOnce([
+      "contains the search content here",
+    ]);
 
     const sendResponse = vi.fn();
     messageListener(
