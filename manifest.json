@@ -69,7 +69,8 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "quick-actions-launcher@extension",
-      "strict_min_version": "91.0"
+      "strict_min_version": "91.0",
+      "data_collection_permissions": []
     }
   }
 }
