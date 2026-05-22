@@ -5,6 +5,7 @@ test-results.xml
 *.log
 *.zip
 *.xpi
+web-ext-artifacts/
 .DS_Store
 Thumbs.db
 doc_progetto/
