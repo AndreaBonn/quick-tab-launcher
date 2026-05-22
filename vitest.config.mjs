@@ -7,7 +7,7 @@ export default defineConfig({
     include: ["tests/**/*.test.js"],
     coverage: {
       provider: "v8",
-      include: ["src/**/*.js", "background/**/*.js", "content/**/*.js"],
+      include: ["src/**/*.js", "background/**/*.js", "content/**/*.js", "options/**/*.js"],
       exclude: ["tests/**"],
     },
   },

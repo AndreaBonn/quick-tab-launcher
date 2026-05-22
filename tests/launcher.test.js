@@ -8,6 +8,13 @@ const {
   buildFlatResults,
 } = require("../src/search-utils.js");
 
+const {
+  QAL_CONFIG_DEFAULTS,
+  CONFIG_STORAGE_KEY,
+  mergeWithDefaults,
+  applyConfigToGlobal,
+} = require("../src/config-storage.js");
+
 /**
  * Creates a minimal browser mock for content script testing.
  */
@@ -22,16 +29,28 @@ function createBrowserMock() {
       }),
       onMessage: { addListener: vi.fn() },
     },
+    storage: {
+      local: {
+        get: vi.fn().mockResolvedValue({}),
+        set: vi.fn().mockResolvedValue(undefined),
+      },
+      onChanged: { addListener: vi.fn() },
+    },
   };
 }
 
 /**
  * Loads launcher.js into the current jsdom environment.
  * Returns references to the shadow root and registered listeners.
+ * Async because bootstrap() awaits loadConfig() before init().
  */
-function loadLauncher(browserMock) {
+async function loadLauncher(browserMock) {
   globalThis.browser = browserMock;
   globalThis.QAL_CONFIG = QAL_CONFIG;
+  globalThis.QAL_CONFIG_DEFAULTS = QAL_CONFIG_DEFAULTS;
+  globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
+  globalThis.mergeWithDefaults = mergeWithDefaults;
+  globalThis.applyConfigToGlobal = applyConfigToGlobal;
   globalThis.escapeHtml = escapeHtml;
   globalThis.highlightMatch = highlightMatch;
   globalThis.formatUrl = formatUrl;
@@ -47,6 +66,9 @@ function loadLauncher(browserMock) {
 
   delete require.cache[require.resolve("../content/launcher.js")];
   require("../content/launcher.js");
+
+  // Flush microtasks so async bootstrap() (loadConfig → init) completes
+  await new Promise((r) => setTimeout(r, 0));
 
   HTMLElement.prototype.attachShadow = originalAttachShadow;
 
@@ -64,7 +86,7 @@ function typeAndFlush(input, text) {
   input.value = text;
   input.dispatchEvent(new Event("input"));
   return new Promise((resolve) =>
-    setTimeout(resolve, QAL_CONFIG.DEBOUNCE_MS + 100)
+    setTimeout(resolve, QAL_CONFIG.DEBOUNCE_MS + 100),
   );
 }
 
@@ -82,39 +104,40 @@ describe("launcher.js - initialization", () => {
     delete globalThis.browser;
   });
 
-  it("creates shadow host element in documentElement", () => {
-    loadLauncher(browserMock);
+  it("creates shadow host element in documentElement", async () => {
+    await loadLauncher(browserMock);
     const host = document.getElementById("qal-shadow-host");
     expect(host).toBeTruthy();
   });
 
-  it("does not create duplicate host on re-init", () => {
-    loadLauncher(browserMock);
+  it("does not create duplicate host on re-init", async () => {
+    await loadLauncher(browserMock);
     delete require.cache[require.resolve("../content/launcher.js")];
     require("../content/launcher.js");
+    await new Promise((r) => setTimeout(r, 0));
     const hosts = document.querySelectorAll("#qal-shadow-host");
     expect(hosts).toHaveLength(1);
   });
 
-  it("loads CSS from extension URL", () => {
-    const { shadowRoot } = loadLauncher(browserMock);
+  it("loads CSS from extension URL", async () => {
+    const { shadowRoot } = await loadLauncher(browserMock);
     expect(browserMock.runtime.getURL).toHaveBeenCalledWith(
-      "content/launcher.css"
+      "content/launcher.css",
     );
     const link = shadowRoot.querySelector('link[rel="stylesheet"]');
     expect(link).toBeTruthy();
     expect(link.href).toContain("content/launcher.css");
   });
 
-  it("creates overlay initially hidden", () => {
-    const { shadowRoot } = loadLauncher(browserMock);
+  it("creates overlay initially hidden", async () => {
+    const { shadowRoot } = await loadLauncher(browserMock);
     const overlay = shadowRoot.querySelector(".qal-overlay");
     expect(overlay).toBeTruthy();
     expect(overlay.style.display).toBe("none");
   });
 
-  it("creates all structural elements", () => {
-    const { shadowRoot } = loadLauncher(browserMock);
+  it("creates all structural elements", async () => {
+    const { shadowRoot } = await loadLauncher(browserMock);
     expect(shadowRoot.querySelector(".qal-backdrop")).toBeTruthy();
     expect(shadowRoot.querySelector(".qal-panel")).toBeTruthy();
     expect(shadowRoot.querySelector(".qal-input")).toBeTruthy();
@@ -128,10 +151,10 @@ describe("launcher.js - toggle behavior", () => {
   let shadowRoot;
   let messageListener;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     document.documentElement.innerHTML = "<head></head><body></body>";
     browserMock = createBrowserMock();
-    ({ shadowRoot, messageListener } = loadLauncher(browserMock));
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
   });
 
   afterEach(() => {
@@ -173,7 +196,7 @@ describe("launcher.js - keyboard navigation", () => {
   let shadowRoot;
   let messageListener;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     document.documentElement.innerHTML = "<head></head><body></body>";
     browserMock = createBrowserMock();
     browserMock.runtime.sendMessage.mockResolvedValue({
@@ -184,7 +207,7 @@ describe("launcher.js - keyboard navigation", () => {
       bookmarks: [{ id: "b1", title: "BM 1", url: "https://c.com" }],
       history: [],
     });
-    ({ shadowRoot, messageListener } = loadLauncher(browserMock));
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
   });
 
   afterEach(() => {
@@ -209,7 +232,7 @@ describe("launcher.js - keyboard navigation", () => {
     await typeAndFlush(input, "tab");
 
     input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
     );
 
     const items = shadowRoot.querySelectorAll(".qal-result-item");
@@ -224,7 +247,7 @@ describe("launcher.js - keyboard navigation", () => {
     const totalItems = shadowRoot.querySelectorAll(".qal-result-item").length;
     for (let i = 0; i < totalItems; i++) {
       input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
       );
     }
 
@@ -238,10 +261,10 @@ describe("launcher.js - keyboard navigation", () => {
     await typeAndFlush(input, "tab");
 
     input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
     );
     input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
     );
 
     const items = shadowRoot.querySelectorAll(".qal-result-item");
@@ -254,7 +277,7 @@ describe("launcher.js - keyboard navigation", () => {
     await typeAndFlush(input, "tab");
 
     input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
     );
 
     const items = shadowRoot.querySelectorAll(".qal-result-item");
@@ -267,7 +290,7 @@ describe("launcher.js - keyboard navigation", () => {
     const input = shadowRoot.querySelector(".qal-input");
 
     input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
 
     const overlay = shadowRoot.querySelector(".qal-overlay");
@@ -280,7 +303,7 @@ describe("launcher.js - keyboard navigation", () => {
     await typeAndFlush(input, "tab");
 
     input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
     );
 
     expect(browserMock.runtime.sendMessage).toHaveBeenCalledWith(
@@ -288,7 +311,7 @@ describe("launcher.js - keyboard navigation", () => {
         action: "navigate",
         type: "tab",
         tabId: 1,
-      })
+      }),
     );
   });
 
@@ -298,7 +321,7 @@ describe("launcher.js - keyboard navigation", () => {
     await typeAndFlush(input, "tab");
 
     input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
+      new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
     );
 
     const items = shadowRoot.querySelectorAll(".qal-result-item");
@@ -311,10 +334,10 @@ describe("launcher.js - result rendering", () => {
   let shadowRoot;
   let messageListener;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     document.documentElement.innerHTML = "<head></head><body></body>";
     browserMock = createBrowserMock();
-    ({ shadowRoot, messageListener } = loadLauncher(browserMock));
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
   });
 
   afterEach(() => {
@@ -341,9 +364,7 @@ describe("launcher.js - result rendering", () => {
 
   it("renders section headers with correct counts", async () => {
     browserMock.runtime.sendMessage.mockResolvedValue({
-      tabs: [
-        { id: 1, title: "T1", url: "https://a.com", favIconUrl: null },
-      ],
+      tabs: [{ id: 1, title: "T1", url: "https://a.com", favIconUrl: null }],
       bookmarks: [
         { id: "b1", title: "B1", url: "https://b.com" },
         { id: "b2", title: "B2", url: "https://c.com" },
@@ -365,9 +386,7 @@ describe("launcher.js - result rendering", () => {
 
   it("shows close button only for tab results", async () => {
     browserMock.runtime.sendMessage.mockResolvedValue({
-      tabs: [
-        { id: 1, title: "Tab", url: "https://a.com", favIconUrl: null },
-      ],
+      tabs: [{ id: 1, title: "Tab", url: "https://a.com", favIconUrl: null }],
       bookmarks: [{ id: "b1", title: "BM", url: "https://b.com" }],
       history: [],
     });
@@ -387,9 +406,7 @@ describe("launcher.js - result rendering", () => {
 
   it("shows empty state for cleared input", async () => {
     browserMock.runtime.sendMessage.mockResolvedValue({
-      tabs: [
-        { id: 1, title: "T1", url: "https://a.com", favIconUrl: null },
-      ],
+      tabs: [{ id: 1, title: "T1", url: "https://a.com", favIconUrl: null }],
       bookmarks: [],
       history: [],
     });
@@ -407,15 +424,79 @@ describe("launcher.js - result rendering", () => {
   });
 });
 
+describe("launcher.js - window badge", () => {
+  let browserMock;
+  let shadowRoot;
+  let messageListener;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("shows window badge for tab from another window", async () => {
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [
+        {
+          id: 5,
+          title: "Other Window Tab",
+          url: "https://other.com",
+          favIconUrl: null,
+          isCurrentWindow: false,
+        },
+      ],
+      bookmarks: [],
+      history: [],
+    });
+
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "other");
+
+    const badge = shadowRoot.querySelector(".qal-window-badge");
+    expect(badge).toBeTruthy();
+  });
+
+  it("does not show window badge for tab from current window", async () => {
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [
+        {
+          id: 1,
+          title: "Current Window Tab",
+          url: "https://current.com",
+          favIconUrl: null,
+          isCurrentWindow: true,
+        },
+      ],
+      bookmarks: [],
+      history: [],
+    });
+
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "current");
+
+    const badge = shadowRoot.querySelector(".qal-window-badge");
+    expect(badge).toBeNull();
+  });
+});
+
 describe("launcher.js - backdrop close", () => {
   let browserMock;
   let shadowRoot;
   let messageListener;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     document.documentElement.innerHTML = "<head></head><body></body>";
     browserMock = createBrowserMock();
-    ({ shadowRoot, messageListener } = loadLauncher(browserMock));
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
   });
 
   afterEach(() => {

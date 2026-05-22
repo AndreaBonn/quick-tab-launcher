@@ -207,6 +207,15 @@
   padding: 0 1px;
 }
 
+.qal-window-badge {
+  font-size: 11px;
+  color: var(--qal-text-secondary);
+  flex-shrink: 0;
+  opacity: 0.7;
+  border-radius: 3px;
+  line-height: 1;
+}
+
 .qal-result-actions {
   flex-shrink: 0;
   display: flex;
@@ -222,7 +231,9 @@
   color: var(--qal-text-secondary);
   padding: 2px 6px;
   border-radius: 4px;
-  transition: opacity 0.1s, background 0.1s;
+  transition:
+    opacity 0.1s,
+    background 0.1s;
   line-height: 1;
 }
 

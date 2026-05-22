@@ -22,6 +22,13 @@ function createBrowserMock() {
     runtime: {
       onMessage: { addListener: vi.fn() },
     },
+    storage: {
+      local: {
+        get: vi.fn().mockResolvedValue({}),
+        set: vi.fn().mockResolvedValue(undefined),
+      },
+      onChanged: { addListener: vi.fn() },
+    },
     tabs: {
       query: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn().mockResolvedValue(undefined),
@@ -46,9 +53,24 @@ function createBrowserMock() {
  * Loads background.js in a controlled environment.
  * Captures the listener callbacks registered on browser.commands and browser.runtime.
  */
+const {
+  QAL_CONFIG_DEFAULTS,
+  CONFIG_STORAGE_KEY,
+  mergeWithDefaults,
+  loadUserConfig,
+  saveUserConfig,
+  applyConfigToGlobal,
+} = require("../src/config-storage.js");
+
 function loadBackground(browserMock) {
   globalThis.browser = browserMock;
   globalThis.QAL_CONFIG = QAL_CONFIG;
+  globalThis.QAL_CONFIG_DEFAULTS = QAL_CONFIG_DEFAULTS;
+  globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
+  globalThis.mergeWithDefaults = mergeWithDefaults;
+  globalThis.loadUserConfig = loadUserConfig;
+  globalThis.saveUserConfig = saveUserConfig;
+  globalThis.applyConfigToGlobal = applyConfigToGlobal;
   globalThis.deduplicateResults = deduplicateResults;
   globalThis.normalizeUrl = normalizeUrl;
 
@@ -389,6 +411,106 @@ describe("background.js - navigate handler", () => {
       vi.fn(),
     );
     expect(result).toBe(false);
+  });
+});
+
+describe("background.js - searchTabs - all windows", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ messageListener } = loadBackground(browserMock));
+  });
+
+  it("queries all tabs without currentWindow filter", async () => {
+    browserMock.tabs.query.mockResolvedValue([]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "test" },
+      { tab: { id: 1, windowId: 10 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+
+    const tabsQueryCall = browserMock.tabs.query.mock.calls.find(
+      (call) => !call[0].active,
+    );
+    expect(tabsQueryCall[0]).toEqual({});
+  });
+
+  it("includes windowId in tab results", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 1,
+        title: "Test Page",
+        url: "https://example.com",
+        favIconUrl: null,
+        active: false,
+        windowId: 10,
+      },
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "test" },
+      { tab: { id: 1, windowId: 10 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    const results = sendResponse.mock.calls[0][0];
+    expect(results.tabs[0].windowId).toBe(10);
+  });
+
+  it("marks tab from same window as isCurrentWindow true", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 1,
+        title: "Same Window",
+        url: "https://example.com",
+        favIconUrl: null,
+        active: false,
+        windowId: 10,
+      },
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "same" },
+      { tab: { id: 1, windowId: 10 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    const results = sendResponse.mock.calls[0][0];
+    expect(results.tabs[0].isCurrentWindow).toBe(true);
+  });
+
+  it("marks tab from different window as isCurrentWindow false", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 5,
+        title: "Other Window",
+        url: "https://other.com",
+        favIconUrl: null,
+        active: false,
+        windowId: 99,
+      },
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "other" },
+      { tab: { id: 1, windowId: 10 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    const results = sendResponse.mock.calls[0][0];
+    expect(results.tabs[0].isCurrentWindow).toBe(false);
   });
 });
 

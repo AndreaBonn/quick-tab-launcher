@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, escapeHtml, highlightMatch, formatUrl, buildFlatResults */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, escapeHtml, highlightMatch, formatUrl, buildFlatResults */
 
 (function () {
   "use strict";
@@ -202,8 +202,7 @@
 
   function selectNext() {
     if (state.flatResults.length === 0) return;
-    state.selectedIndex =
-      (state.selectedIndex + 1) % state.flatResults.length;
+    state.selectedIndex = (state.selectedIndex + 1) % state.flatResults.length;
     updateSelection();
   }
 
@@ -271,7 +270,7 @@
     itemEl.remove();
 
     const tabSection = state.shadowRoot.querySelector(
-      '.qal-section[data-section="tabs"]'
+      '.qal-section[data-section="tabs"]',
     );
     if (tabSection) {
       const remainingItems = tabSection.querySelectorAll(".qal-result-item");
@@ -358,7 +357,15 @@
 
     const favicon = createFavicon(item, sectionKey);
     const textContainer = createResultText(item, query);
-    el.append(favicon, textContainer);
+
+    if (sectionKey === "tabs" && item.isCurrentWindow === false) {
+      const badge = createElement("span", "qal-window-badge");
+      badge.textContent = "\u2197";
+      badge.title = "Altra finestra";
+      el.append(favicon, badge, textContainer);
+    } else {
+      el.append(favicon, textContainer);
+    }
 
     if (sectionKey === "tabs") {
       const actions = createElement("div", "qal-result-actions");
@@ -435,9 +442,32 @@
     state.elements.results.appendChild(error);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
+  async function loadConfig() {
+    try {
+      const result = await browser.storage.local.get(CONFIG_STORAGE_KEY);
+      const userConfig = result[CONFIG_STORAGE_KEY] ?? {};
+      const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
+      applyConfigToGlobal(QAL_CONFIG, merged);
+    } catch {
+      // Storage non disponibile: usa default
+    }
+  }
+
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !changes[CONFIG_STORAGE_KEY]) return;
+    const userConfig = changes[CONFIG_STORAGE_KEY].newValue ?? {};
+    const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
+    applyConfigToGlobal(QAL_CONFIG, merged);
+  });
+
+  async function bootstrap() {
+    await loadConfig();
     init();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootstrap);
+  } else {
+    bootstrap();
   }
 })();

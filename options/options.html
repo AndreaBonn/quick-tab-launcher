@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Impostazioni - Quick Actions Launcher</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="qal-options-container">
+      <header class="qal-options-header">
+        <h1 class="qal-options-title">Quick Actions Launcher</h1>
+        <p class="qal-options-subtitle">Impostazioni</p>
+      </header>
+
+      <main>
+        <form id="qal-options-form" class="qal-options-form" novalidate>
+
+          <fieldset class="qal-options-fieldset">
+            <legend class="qal-options-legend">Risultati per tipo</legend>
+
+            <div class="qal-options-field">
+              <label class="qal-options-label" for="qal-max-tab-results">
+                Schede aperte
+                <span class="qal-options-hint">Massimo risultati da schede aperte</span>
+              </label>
+              <input
+                class="qal-options-input"
+                id="qal-max-tab-results"
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                required
+              />
+            </div>
+
+            <div class="qal-options-field">
+              <label class="qal-options-label" for="qal-max-bookmark-results">
+                Segnalibri
+                <span class="qal-options-hint">Massimo risultati da segnalibri</span>
+              </label>
+              <input
+                class="qal-options-input"
+                id="qal-max-bookmark-results"
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                required
+              />
+            </div>
+
+            <div class="qal-options-field">
+              <label class="qal-options-label" for="qal-max-history-results">
+                Cronologia
+                <span class="qal-options-hint">Massimo risultati dalla cronologia</span>
+              </label>
+              <input
+                class="qal-options-input"
+                id="qal-max-history-results"
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                required
+              />
+            </div>
+          </fieldset>
+
+          <fieldset class="qal-options-fieldset">
+            <legend class="qal-options-legend">Comportamento</legend>
+
+            <div class="qal-options-field">
+              <label class="qal-options-label" for="qal-debounce-ms">
+                Ritardo ricerca (ms)
+                <span class="qal-options-hint">Attesa prima di avviare la ricerca durante la digitazione (0-2000)</span>
+              </label>
+              <input
+                class="qal-options-input"
+                id="qal-debounce-ms"
+                type="number"
+                min="0"
+                max="2000"
+                step="10"
+                required
+              />
+            </div>
+
+            <div class="qal-options-field">
+              <label class="qal-options-label" for="qal-history-days">
+                Giorni cronologia
+                <span class="qal-options-hint">Quanti giorni di cronologia includere nella ricerca (1-365)</span>
+              </label>
+              <input
+                class="qal-options-input"
+                id="qal-history-days"
+                type="number"
+                min="1"
+                max="365"
+                step="1"
+                required
+              />
+            </div>
+
+            <div class="qal-options-field">
+              <label class="qal-options-label" for="qal-min-query-length">
+                Caratteri minimi per segnalibri e cronologia
+                <span class="qal-options-hint">Lunghezza minima della query per cercare in segnalibri e cronologia (1-10)</span>
+              </label>
+              <input
+                class="qal-options-input"
+                id="qal-min-query-length"
+                type="number"
+                min="1"
+                max="10"
+                step="1"
+                required
+              />
+            </div>
+
+            <div class="qal-options-field">
+              <label class="qal-options-label" for="qal-loading-threshold-ms">
+                Soglia indicatore caricamento (ms)
+                <span class="qal-options-hint">Attesa prima di mostrare l'indicatore di caricamento (0-5000)</span>
+              </label>
+              <input
+                class="qal-options-input"
+                id="qal-loading-threshold-ms"
+                type="number"
+                min="0"
+                max="5000"
+                step="50"
+                required
+              />
+            </div>
+          </fieldset>
+
+          <p id="qal-feedback" class="qal-options-feedback" aria-live="polite"></p>
+
+          <div class="qal-options-actions">
+            <button type="submit" class="qal-options-btn qal-options-btn--primary" id="qal-save-btn">
+              Salva impostazioni
+            </button>
+            <button type="button" class="qal-options-btn qal-options-btn--secondary" id="qal-reset-btn">
+              Ripristina predefiniti
+            </button>
+          </div>
+
+        </form>
+      </main>
+    </div>
+
+    <script src="../src/search-utils.js"></script>
+    <script src="../src/config-storage.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

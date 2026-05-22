@@ -17,14 +17,26 @@
     "default_title": "Quick Actions Launcher"
   },
   "permissions": ["tabs", "bookmarks", "history", "activeTab", "storage"],
+  "options_ui": {
+    "page": "options/options.html",
+    "browser_style": false
+  },
   "background": {
-    "scripts": ["src/search-utils.js", "background/background.js"],
+    "scripts": [
+      "src/search-utils.js",
+      "src/config-storage.js",
+      "background/background.js"
+    ],
     "persistent": false
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/search-utils.js", "content/launcher.js"],
+      "js": [
+        "src/search-utils.js",
+        "src/config-storage.js",
+        "content/launcher.js"
+      ],
       "run_at": "document_end"
     }
   ],

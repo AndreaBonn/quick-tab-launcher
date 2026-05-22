@@ -1,4 +1,19 @@
-/* global browser, QAL_CONFIG */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY */
+
+async function initConfig() {
+  const userConfig = await loadUserConfig();
+  const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
+  applyConfigToGlobal(QAL_CONFIG, merged);
+}
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !changes[CONFIG_STORAGE_KEY]) return;
+  const userConfig = changes[CONFIG_STORAGE_KEY].newValue ?? {};
+  const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
+  applyConfigToGlobal(QAL_CONFIG, merged);
+});
+
+initConfig();
 
 async function toggleLauncher() {
   try {
@@ -24,7 +39,8 @@ browser.browserAction.onClicked.addListener(async () => {
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "search") {
-    handleSearch(message.query).then(sendResponse);
+    const senderWindowId = sender.tab?.windowId;
+    handleSearch(message.query, senderWindowId).then(sendResponse);
     return true;
   }
 
@@ -41,12 +57,12 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-async function handleSearch(query) {
+async function handleSearch(query, senderWindowId) {
   const q = query.trim().toLowerCase();
   if (!q) return { tabs: [], bookmarks: [], history: [] };
 
   const [tabs, bookmarks, history] = await Promise.all([
-    searchTabs(q),
+    searchTabs(q, senderWindowId),
     searchBookmarks(q),
     searchHistory(q),
   ]);
@@ -54,8 +70,8 @@ async function handleSearch(query) {
   return deduplicateResults(tabs, bookmarks, history);
 }
 
-async function searchTabs(query) {
-  const allTabs = await browser.tabs.query({ currentWindow: true });
+async function searchTabs(query, currentWindowId) {
+  const allTabs = await browser.tabs.query({});
   return allTabs
     .filter(
       (tab) =>
@@ -69,6 +85,8 @@ async function searchTabs(query) {
       url: tab.url,
       favIconUrl: tab.favIconUrl || null,
       active: tab.active,
+      windowId: tab.windowId,
+      isCurrentWindow: tab.windowId === currentWindowId,
     }));
 }
 
