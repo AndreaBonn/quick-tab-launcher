@@ -22,8 +22,8 @@ async function updatePopupForTab(tabId) {
     } else {
       await browser.browserAction.setPopup({ popup: "" });
     }
-  } catch {
-    // Tab might not exist anymore
+  } catch (err) {
+    console.warn("Quick Actions Launcher: popup update failed", err);
   }
 }
 
@@ -195,7 +195,8 @@ async function extractTabContent(tabId) {
     });
     const raw = results[0] ? String(results[0]) : "";
     return raw.substring(0, QAL_CONFIG.FULLTEXT_MAX_LENGTH).toLowerCase();
-  } catch {
+  } catch (err) {
+    console.warn("Quick Actions Launcher: content extraction failed", err);
     return "";
   }
 }

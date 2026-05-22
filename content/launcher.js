@@ -130,8 +130,8 @@
       const stored = await loadUserConfig();
       stored.ENABLE_FULLTEXT_SEARCH = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
       await saveUserConfig(stored);
-    } catch {
-      // Storage non disponibile: toggle valido solo per sessione
+    } catch (err) {
+      console.warn("Quick Actions Launcher: config save failed", err);
     }
     retriggerSearch();
   }
@@ -219,8 +219,8 @@
       if (state.selectedIndex >= 0) {
         updateSelection(state.elements.results, state.selectedIndex);
       }
-    } catch {
-      // Recent tabs not available
+    } catch (err) {
+      console.warn("Quick Actions Launcher: recent tabs unavailable", err);
     }
   }
 
@@ -231,8 +231,8 @@
       });
       if (!state.isVisible || result.count <= 0) return;
       renderDuplicateBanner(state.elements.results, result.count);
-    } catch {
-      // Duplicate check not available
+    } catch (err) {
+      console.warn("Quick Actions Launcher: duplicate check failed", err);
     }
   }
 
@@ -481,8 +481,8 @@
       const userConfig = result[CONFIG_STORAGE_KEY] ?? {};
       const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
       applyConfigToGlobal(QAL_CONFIG, merged);
-    } catch {
-      // Storage non disponibile: usa default
+    } catch (err) {
+      console.warn("Quick Actions Launcher: config load failed", err);
     }
   }
 
