@@ -25,6 +25,7 @@
     "storage",
     "<all_urls>"
   ],
+  "content_security_policy": "script-src 'self'; object-src 'self'",
   "options_ui": {
     "page": "options/options.html",
     "browser_style": false
