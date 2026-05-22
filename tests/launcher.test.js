@@ -578,3 +578,377 @@ describe("launcher.js - backdrop close", () => {
     expect(overlay.style.display).toBe("none");
   });
 });
+
+describe("launcher.js - close tab via click", () => {
+  let browserMock;
+  let shadowRoot;
+  let messageListener;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [
+        { id: 10, title: "Tab A", url: "https://a.com", favIconUrl: null },
+        { id: 11, title: "Tab B", url: "https://b.com", favIconUrl: null },
+      ],
+      bookmarks: [],
+      history: [],
+    });
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("sends close-tab message and removes item from results on close button click", async () => {
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "tab");
+
+    const closeBtn = shadowRoot.querySelector(".qal-close-tab");
+    closeBtn.click();
+
+    expect(browserMock.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "close-tab", tabId: 10 }),
+    );
+    const remaining = shadowRoot.querySelectorAll(".qal-result-item");
+    expect(remaining).toHaveLength(1);
+  });
+
+  it("removes the tabs section when the last tab is closed", async () => {
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [
+        { id: 10, title: "Only Tab", url: "https://a.com", favIconUrl: null },
+      ],
+      bookmarks: [],
+      history: [],
+    });
+
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "tab");
+
+    const closeBtn = shadowRoot.querySelector(".qal-close-tab");
+    closeBtn.click();
+
+    const tabSection = shadowRoot.querySelector(
+      '.qal-section[data-section="tabs"]',
+    );
+    expect(tabSection).toBeNull();
+  });
+});
+
+describe("launcher.js - result item click navigation", () => {
+  let browserMock;
+  let shadowRoot;
+  let messageListener;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [
+        {
+          id: 5,
+          title: "Click Me",
+          url: "https://click.com",
+          favIconUrl: null,
+        },
+      ],
+      bookmarks: [],
+      history: [],
+    });
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("sends navigate message on result item click", async () => {
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "click");
+
+    browserMock.runtime.sendMessage.mockClear();
+
+    const item = shadowRoot.querySelector(".qal-result-item");
+    item.click();
+
+    expect(browserMock.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "navigate" }),
+    );
+  });
+
+  it("sends navigate with openInCurrent false when ctrlKey is pressed on a bookmark result", async () => {
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [],
+      bookmarks: [
+        { id: "b1", title: "Click Bookmark", url: "https://click.com" },
+      ],
+      history: [],
+    });
+
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "click");
+
+    browserMock.runtime.sendMessage.mockClear();
+
+    const item = shadowRoot.querySelector(".qal-result-item");
+    item.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, ctrlKey: true }),
+    );
+
+    expect(browserMock.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "navigate", openInCurrent: false }),
+    );
+  });
+
+  it("does not send navigate message when clicking the results container outside an item", async () => {
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "click");
+
+    browserMock.runtime.sendMessage.mockClear();
+
+    const container = shadowRoot.querySelector(".qal-results");
+    container.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(browserMock.runtime.sendMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("launcher.js - renderError on sendMessage rejection", () => {
+  let browserMock;
+  let shadowRoot;
+  let messageListener;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("shows error message when sendMessage rejects", async () => {
+    browserMock.runtime.sendMessage.mockRejectedValue(
+      new Error("network error"),
+    );
+
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "something");
+
+    const error = shadowRoot.querySelector(".qal-empty-state");
+    expect(error).toBeTruthy();
+    expect(error.textContent).toContain("Errore");
+  });
+});
+
+describe("launcher.js - loadConfig catch path", () => {
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("does not crash and keeps defaults when storage.local.get rejects", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const browserMock = createBrowserMock();
+    browserMock.storage.local.get = vi
+      .fn()
+      .mockRejectedValue(new Error("storage unavailable"));
+
+    await expect(loadLauncher(browserMock)).resolves.not.toThrow();
+
+    const host = document.getElementById("qal-shadow-host");
+    expect(host).toBeTruthy();
+  });
+});
+
+describe("launcher.js - storage.onChanged listener", () => {
+  let browserMock;
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("updates QAL_CONFIG when storage changes in local area with config key", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    await loadLauncher(browserMock);
+
+    const onChangedListener =
+      browserMock.storage.onChanged.addListener.mock.calls[0][0];
+    const prevDebounce = globalThis.QAL_CONFIG.DEBOUNCE_MS;
+
+    onChangedListener(
+      { [CONFIG_STORAGE_KEY]: { newValue: { DEBOUNCE_MS: 999 } } },
+      "local",
+    );
+
+    expect(globalThis.QAL_CONFIG.DEBOUNCE_MS).not.toBe(prevDebounce);
+  });
+
+  it("does not update QAL_CONFIG when area is sync", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    await loadLauncher(browserMock);
+
+    const onChangedListener =
+      browserMock.storage.onChanged.addListener.mock.calls[0][0];
+    const prevDebounce = globalThis.QAL_CONFIG.DEBOUNCE_MS;
+
+    onChangedListener(
+      { [CONFIG_STORAGE_KEY]: { newValue: { DEBOUNCE_MS: 9999 } } },
+      "sync",
+    );
+
+    expect(globalThis.QAL_CONFIG.DEBOUNCE_MS).toBe(prevDebounce);
+  });
+});
+
+describe("launcher.js - createFavicon with invalid URL", () => {
+  let browserMock;
+  let shadowRoot;
+  let messageListener;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [],
+      bookmarks: [{ id: "b1", title: "Invalid URL BM", url: "not-a-url" }],
+      history: [],
+    });
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("renders result without crash when item url is not a valid URL", async () => {
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "invalid");
+
+    const items = shadowRoot.querySelectorAll(".qal-result-item");
+    expect(items.length).toBeGreaterThan(0);
+
+    const favicon = items[0].querySelector(".qal-favicon");
+    expect(favicon).toBeTruthy();
+    expect(favicon.src === "" || favicon.getAttribute("src") === "").toBe(true);
+  });
+});
+
+describe("launcher.js - loading indicator", () => {
+  let browserMock;
+  let shadowRoot;
+  let messageListener;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    // Slow sendMessage to trigger loading threshold
+    browserMock.runtime.sendMessage.mockImplementation(
+      () =>
+        new Promise((r) =>
+          setTimeout(() => r({ tabs: [], bookmarks: [], history: [] }), 1000),
+        ),
+    );
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("shows loading indicator after threshold when search is slow", async () => {
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    input.value = "slow";
+    input.dispatchEvent(new Event("input"));
+
+    // Wait for debounce + loading threshold
+    await new Promise((r) =>
+      setTimeout(
+        r,
+        QAL_CONFIG.DEBOUNCE_MS + QAL_CONFIG.LOADING_THRESHOLD_MS + 50,
+      ),
+    );
+
+    const loading = shadowRoot.querySelector(".qal-loading");
+    expect(loading).toBeTruthy();
+    expect(loading.textContent).toContain("Ricerca in corso");
+  });
+});
+
+describe("launcher.js - storage.onChanged in content script", () => {
+  let browserMock;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    await loadLauncher(browserMock);
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("updates QAL_CONFIG when storage.onChanged fires for config key", () => {
+    const storageListener =
+      browserMock.storage.onChanged.addListener.mock.calls[0][0];
+
+    storageListener(
+      { [CONFIG_STORAGE_KEY]: { newValue: { DEBOUNCE_MS: 200 } } },
+      "local",
+    );
+
+    expect(QAL_CONFIG.DEBOUNCE_MS).toBe(200);
+  });
+
+  it("ignores storage.onChanged for non-local area", () => {
+    const original = QAL_CONFIG.DEBOUNCE_MS;
+    const storageListener =
+      browserMock.storage.onChanged.addListener.mock.calls[0][0];
+
+    storageListener(
+      { [CONFIG_STORAGE_KEY]: { newValue: { DEBOUNCE_MS: 999 } } },
+      "sync",
+    );
+
+    expect(QAL_CONFIG.DEBOUNCE_MS).toBe(original);
+  });
+
+  it("ignores storage.onChanged for unrelated keys", () => {
+    const original = QAL_CONFIG.DEBOUNCE_MS;
+    const storageListener =
+      browserMock.storage.onChanged.addListener.mock.calls[0][0];
+
+    storageListener({ other_key: { newValue: "something" } }, "local");
+
+    expect(QAL_CONFIG.DEBOUNCE_MS).toBe(original);
+  });
+});

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const {
   QAL_CONFIG_DEFAULTS,
@@ -320,5 +320,60 @@ describe("options page - reset", () => {
     expect(document.getElementById("qal-max-tab-results").value).toBe(
       String(QAL_CONFIG_DEFAULTS.MAX_TAB_RESULTS),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test: showFeedback timeout resets
+// ---------------------------------------------------------------------------
+
+describe("options page - showFeedback timeout", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("clears feedback text after 3000ms", async () => {
+    // Load the page with real timers first, then switch to fake
+    const mock = createBrowserMock({});
+    mock.storage.local.get = vi.fn().mockResolvedValue({});
+
+    // Use real timers for async init
+    vi.useRealTimers();
+    loadOptionsPage(mock);
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Now install fake timers before triggering showFeedback
+    vi.useFakeTimers();
+
+    document.getElementById("qal-max-tab-results").value = "5";
+    document.getElementById("qal-max-bookmark-results").value = "5";
+    document.getElementById("qal-max-history-results").value = "5";
+    document.getElementById("qal-debounce-ms").value = "80";
+    document.getElementById("qal-history-days").value = "30";
+    document.getElementById("qal-min-query-length").value = "2";
+    document.getElementById("qal-loading-threshold-ms").value = "300";
+
+    document
+      .getElementById("qal-options-form")
+      .dispatchEvent(new Event("submit", { cancelable: true }));
+
+    // Flush microtask queue for the async saveSettings chain
+    // (storage.local.set is a resolved promise, needs 2 microtask ticks)
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const feedback = document.getElementById("qal-feedback");
+    expect(feedback.textContent).not.toBe("");
+
+    // Advance timers past the 3000ms timeout set by showFeedback
+    vi.advanceTimersByTime(3000);
+
+    expect(feedback.textContent).toBe("");
+    expect(feedback.className).toBe("qal-options-feedback");
   });
 });

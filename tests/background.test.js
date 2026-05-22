@@ -886,3 +886,317 @@ describe("background.js - handleNavigate with undefined senderTabId", () => {
     );
   });
 });
+
+describe("background.js - handleCloseTab error path", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ messageListener } = loadBackground(browserMock));
+  });
+
+  it("does not crash when tabs.remove rejects", async () => {
+    browserMock.tabs.remove.mockRejectedValue(new Error("Tab not found"));
+
+    await expect(
+      new Promise((resolve) => {
+        messageListener(
+          { action: "close-tab", tabId: 999 },
+          { tab: { id: 10 } },
+          vi.fn(),
+        );
+        setTimeout(resolve, 10);
+      }),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("background.js - extractDomain edge cases", () => {
+  it("returns the original string when url is not a valid URL", () => {
+    const browserMock = createBrowserMock();
+    const { messageListener } = loadBackground(browserMock);
+
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, title: null, url: "not-a-url", active: false, windowId: 1 },
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "not-a-url" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    return vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalled();
+      expect(sendResponse.mock.calls[0][0].tabs[0].title).toBe("not-a-url");
+    });
+  });
+
+  it("returns empty string as title fallback when url is empty string", () => {
+    const browserMock = createBrowserMock();
+    const { messageListener } = loadBackground(browserMock);
+
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, title: null, url: "", active: false, windowId: 1 },
+    ]);
+
+    // Use a query that matches on url field — empty string matches any includes("")
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "  " },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    return vi.waitFor(() => {
+      // query "  " trims to "" → early return with empty results
+      expect(sendResponse).toHaveBeenCalled();
+      expect(sendResponse.mock.calls[0][0].tabs).toHaveLength(0);
+    });
+  });
+});
+
+describe("background.js - updatePopupForTab error path", () => {
+  let browserMock;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    loadBackground(browserMock);
+  });
+
+  it("does not crash when tabs.get rejects (tab already closed)", async () => {
+    browserMock.tabs.get.mockRejectedValue(new Error("No such tab"));
+    await expect(globalThis.updatePopupForTab(999)).resolves.toBeUndefined();
+  });
+});
+
+describe("background.js - onUpdated for non-active tab", () => {
+  let browserMock;
+  let tabUpdatedListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ tabUpdatedListener } = loadBackground(browserMock));
+  });
+
+  it("does not call setPopup when updated tab is not the active tab", async () => {
+    browserMock.tabs.query.mockResolvedValue([{ id: 1 }]);
+
+    await tabUpdatedListener(99, { url: "https://changed.com" });
+
+    expect(browserMock.browserAction.setPopup).not.toHaveBeenCalled();
+  });
+
+  it("calls setPopup when updated tab is the active tab", async () => {
+    browserMock.tabs.query.mockResolvedValue([{ id: 42 }]);
+    browserMock.tabs.get.mockResolvedValue({ url: "https://active.com" });
+
+    await tabUpdatedListener(42, { url: "https://active.com" });
+
+    expect(browserMock.browserAction.setPopup).toHaveBeenCalled();
+  });
+});
+
+describe("background.js - formatTabResult with isContentMatch true", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(async () => {
+    browserMock = createBrowserMock();
+    browserMock.tabs.executeScript = vi
+      .fn()
+      .mockResolvedValue(["uniquecontentterm"]);
+    ({ messageListener } = loadBackground(browserMock));
+    // Wait for initConfig async to settle before overriding ENABLE_FULLTEXT_SEARCH
+    await new Promise((r) => setTimeout(r, 0));
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = true;
+  });
+
+  afterEach(() => {
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = false;
+  });
+
+  it("includes isContentMatch true in result for content-matched tab", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 7,
+        title: "Unrelated Title",
+        url: "https://unrelated.com",
+        active: false,
+        windowId: 1,
+      },
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "uniquecontentterm" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(sendResponse.mock.calls[0][0].tabs).toHaveLength(1);
+    expect(sendResponse.mock.calls[0][0].tabs[0].isContentMatch).toBe(true);
+  });
+});
+
+describe("background.js - searchTabs skips executeScript when primaryResults full", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    browserMock.tabs.executeScript = vi.fn().mockResolvedValue(["match"]);
+    ({ messageListener } = loadBackground(browserMock));
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = true;
+  });
+
+  it("does not call executeScript when titleUrl matches fill MAX_TAB_RESULTS", async () => {
+    const manyTabs = Array.from(
+      { length: QAL_CONFIG.MAX_TAB_RESULTS },
+      (_, i) => ({
+        id: i,
+        title: `match tab ${i}`,
+        url: `https://match${i}.com`,
+        active: false,
+        windowId: 1,
+      }),
+    );
+    browserMock.tabs.query.mockResolvedValue(manyTabs);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "match" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(browserMock.tabs.executeScript).not.toHaveBeenCalled();
+  });
+});
+
+describe("background.js - storage.onChanged listener", () => {
+  let browserMock;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+  });
+
+  afterEach(() => {
+    delete globalThis.browser;
+  });
+
+  it("updates QAL_CONFIG when storage changes with config key", async () => {
+    loadBackground(browserMock);
+    await new Promise((r) => setTimeout(r, 0));
+
+    const storageListener =
+      browserMock.storage.onChanged.addListener.mock.calls[0][0];
+
+    storageListener(
+      { [CONFIG_STORAGE_KEY]: { newValue: { MAX_TAB_RESULTS: 20 } } },
+      "local",
+    );
+
+    expect(QAL_CONFIG.MAX_TAB_RESULTS).toBe(20);
+  });
+
+  it("ignores storage changes from non-local area", async () => {
+    loadBackground(browserMock);
+    await new Promise((r) => setTimeout(r, 0));
+
+    const original = QAL_CONFIG.MAX_TAB_RESULTS;
+    const storageListener =
+      browserMock.storage.onChanged.addListener.mock.calls[0][0];
+
+    storageListener(
+      { [CONFIG_STORAGE_KEY]: { newValue: { MAX_TAB_RESULTS: 99 } } },
+      "sync",
+    );
+
+    expect(QAL_CONFIG.MAX_TAB_RESULTS).toBe(original);
+  });
+});
+
+describe("background.js - handleNavigate edge cases", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ messageListener } = loadBackground(browserMock));
+  });
+
+  afterEach(() => {
+    delete globalThis.browser;
+  });
+
+  it("opens bookmark in current tab when openInCurrent is true", async () => {
+    messageListener(
+      {
+        action: "navigate",
+        type: "bookmark",
+        url: "https://bookmark.com",
+        openInCurrent: true,
+      },
+      { tab: { id: 10 } },
+    );
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(browserMock.tabs.update).toHaveBeenCalledWith(10, {
+      url: "https://bookmark.com",
+    });
+  });
+
+  it("logs error when handleNavigate fails", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    browserMock.tabs.update.mockRejectedValueOnce(new Error("tab gone"));
+
+    messageListener(
+      { action: "navigate", type: "tab", tabId: 999 },
+      { tab: { id: 10 } },
+    );
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining("navigazione fallita"),
+      expect.any(String),
+    );
+    logSpy.mockRestore();
+  });
+});
+
+describe("background.js - tabs.onActivated callback", () => {
+  let browserMock;
+  let tabActivatedListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ tabActivatedListener } = loadBackground(browserMock));
+    browserMock.browserAction.setPopup.mockClear();
+  });
+
+  afterEach(() => {
+    delete globalThis.browser;
+  });
+
+  it("calls updatePopupForTab on tab activation", async () => {
+    browserMock.tabs.get.mockResolvedValueOnce({
+      url: "https://normal.com",
+      windowId: 1,
+    });
+
+    tabActivatedListener({ tabId: 42 });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(browserMock.tabs.get).toHaveBeenCalledWith(42);
+    expect(browserMock.browserAction.setPopup).toHaveBeenCalledWith({
+      popup: "",
+    });
+  });
+});
