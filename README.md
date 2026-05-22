@@ -1,91 +1,178 @@
+**English** | [Italiano](./README.it.md)
+
 # Quick Actions Launcher
 
-Estensione Firefox che fornisce una palette comandi stile Spotlight/Alfred. Cerca in tempo reale tra schede aperte, segnalibri e cronologia recente, navigando ai risultati via tastiera.
+A Firefox extension that adds a Spotlight-style command palette for searching open tabs, bookmarks, and browsing history from a single keyboard shortcut.
 
-## Funzionalità
+![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
+![JavaScript](https://img.shields.io/badge/javascript-ES2020+-f7df1e)
+![Firefox](https://img.shields.io/badge/firefox-%3E%3D91-ff7139)
+![Manifest](https://img.shields.io/badge/manifest-v2-lightgrey)
 
-- Attivazione con `Ctrl+Shift+Space`
-- Ricerca real-time in schede aperte, segnalibri e cronologia (ultimi 30 giorni)
-- Navigazione completa da tastiera (frecce, Enter, Esc, Tab)
-- Dark/light mode automatico
-- Highlight dei termini di ricerca nei risultati
-- Pulsante per chiudere schede direttamente dal launcher
-- Deduplicazione risultati tra categorie
-- Isolamento DOM tramite Shadow DOM closed
+Type `Ctrl+Shift+Space` (or click the toolbar icon) to open an overlay panel. Start typing to filter across tabs, bookmarks, and history simultaneously. Results are grouped by source, deduplicated, and navigable with keyboard or mouse.
 
-## Requisiti
+## Tech stack
 
-- Firefox 91+
-- Node.js 20+ (solo per sviluppo/test)
+- Vanilla JavaScript (ES2020+), no build step
+- Pure CSS with light/dark mode via `prefers-color-scheme`
+- WebExtension Manifest V2 (Firefox 91+)
+- Vitest + jsdom for testing
+- ESLint (flat config) for linting
+- GitHub Actions CI (lint, test, coverage)
 
-## Installazione (sviluppo)
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph content ["Content Script"]
+        launcher["launcher.js<br/>Shadow DOM UI"]
+        css["launcher.css"]
+    end
+
+    subgraph background ["Background Script"]
+        bg["background.js<br/>WebExtension API bridge"]
+    end
+
+    subgraph shared ["Shared"]
+        utils["search-utils.js<br/>Pure functions"]
+    end
+
+    subgraph firefox ["Firefox APIs"]
+        tabs["browser.tabs"]
+        bookmarks["browser.bookmarks"]
+        history["browser.history"]
+    end
+
+    launcher -- "runtime.sendMessage" --> bg
+    bg -- "tabs/bookmarks/history" --> firefox
+    bg -- "sendResponse" --> launcher
+    launcher --> css
+    utils -.-> launcher
+    utils -.-> bg
+```
+
+The content script injects a closed Shadow DOM overlay into the active page. User input triggers a debounced message to the background script, which queries Firefox APIs in parallel and returns deduplicated results. `search-utils.js` is loaded by both contexts and contains pure functions (escaping, highlighting, URL normalization) with zero browser dependencies.
+
+## Repository structure
+
+```text
+quick-tab-launcher__firefox/
+├── background/
+│   └── background.js        # WebExtension API calls (tabs, bookmarks, history)
+├── content/
+│   ├── launcher.js           # Shadow DOM overlay UI (IIFE, closed mode)
+│   └── launcher.css          # Styles with light/dark theme support
+├── src/
+│   ├── search-utils.js       # Pure shared logic (escaping, dedup, formatting)
+│   └── config-storage.js     # Config read/write via browser.storage.local
+├── options/
+│   ├── options.html          # Settings page UI
+│   ├── options.js            # Settings load/save/reset logic
+│   └── options.css           # Settings page styles (light/dark)
+├── icons/                    # SVG icons (16/32/48/96)
+├── tests/
+│   ├── search-utils.test.js  # Pure function tests, no mocks
+│   ├── config-storage.test.js # Config merge and storage tests
+│   ├── options.test.js       # Settings page tests
+│   ├── background.test.js    # browser.* API mocks via globalThis
+│   └── launcher.test.js      # jsdom + Shadow DOM (forced open for inspection)
+├── .github/workflows/
+│   └── ci.yml                # Lint + test + coverage on push/PR
+├── manifest.json             # Extension manifest (MV2)
+├── eslint.config.mjs         # ESLint flat config
+└── vitest.config.mjs         # Vitest + jsdom + v8 coverage
+```
+
+## Prerequisites
+
+- Firefox 91 or later
+- Node.js 20+ (for development only)
+
+## Installation
+
+### From source (development)
+
+1. Clone the repository
+2. Install development dependencies:
+   ```bash
+   npm install
+   ```
+3. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+4. Click "Load Temporary Add-on" and select the `manifest.json` file from the project root
+
+### As a permanent extension
+
+Package the extension into an `.xpi` file and install it through Firefox Add-ons. The extension requires the following permissions: tabs, bookmarks, history, activeTab, storage.
+
+## Usage
+
+| Action                   | Shortcut / Input                   |
+| ------------------------ | ---------------------------------- |
+| Open/close the launcher  | `Ctrl+Shift+Space` or toolbar icon |
+| Navigate results         | `Arrow Up` / `Arrow Down` / `Tab`  |
+| Open selected result     | `Enter`                            |
+| Open in new tab          | `Ctrl+Enter`                       |
+| Close a tab from results | Click the X button on tab results  |
+| Dismiss the launcher     | `Escape` or click the backdrop     |
+
+Bookmarks and history search activate after 2+ characters. Results are capped at 5 per category and deduplicated across sources (tabs take priority over bookmarks, bookmarks over history).
+
+Tab search spans all open windows. Tabs from other windows display a badge to distinguish them from the current window.
+
+## Configuration
+
+Right-click the extension icon and select "Options" (or go to `about:addons` and click the extension's preferences). Available settings:
+
+| Setting                | Default | Description                                    |
+| ---------------------- | ------- | ---------------------------------------------- |
+| Max tab results        | 5       | Maximum number of open tabs shown              |
+| Max bookmark results   | 5       | Maximum number of bookmarks shown              |
+| Max history results    | 5       | Maximum number of history entries shown        |
+| Search debounce (ms)   | 80      | Delay before triggering search while typing    |
+| History days           | 30      | How many days of browsing history to search    |
+| Min query length       | 2       | Minimum characters to search bookmarks/history |
+| Loading threshold (ms) | 300     | Delay before showing the loading indicator     |
+
+Settings are persisted in `browser.storage.local` and applied in real-time without reloading the extension.
+
+## Known limitations
+
+- No full-text search in page content (matches title and URL only)
+- Does not work on `about:`, `moz-extension:`, or `file:` pages (Firefox WebExtension restriction)
+
+## Testing
+
+Tests run with Vitest in a jsdom environment:
 
 ```bash
-git clone <repo-url>
-cd quick-tab-launcher__firefox
-
-# Installa dipendenze dev (test, lint)
-npm install
+npm test              # Run all tests
+npm run test:coverage # Run with v8 coverage report
+npm run lint          # ESLint check
+npm run lint:fix      # ESLint auto-fix
 ```
 
-### Caricamento in Firefox
+Test files mirror the source structure under `tests/`. `search-utils.test.js` tests pure functions without mocks. `background.test.js` and `launcher.test.js` mock `browser.*` APIs via `globalThis`.
 
-1. Apri Firefox, naviga a `about:debugging#/runtime/this-firefox`
-2. Clicca "Carica componente aggiuntivo temporaneo..."
-3. Seleziona il file `manifest.json` dalla root del progetto
-4. L'estensione e' attiva. Premi `Ctrl+Shift+Space` su qualsiasi pagina.
+## CI/CD
 
-## Test
+GitHub Actions runs on every push and pull request to `main` (`.github/workflows/ci.yml`):
 
-```bash
-npm test              # Esegui test
-npm run test:watch    # Watch mode
-npm run test:coverage # Coverage report
-```
+1. Checkout + Node.js 20 setup with npm cache
+2. `npm ci` (clean install)
+3. Lint (`npm run lint`)
+4. Test (`npm test`)
+5. Coverage report (`npm run test:coverage`)
 
-## Lint
+## Security
 
-```bash
-npm run lint          # Verifica
-npm run lint:fix      # Correggi automaticamente
-```
+The extension runs entirely client-side within Firefox's WebExtension sandbox. Input displayed in the overlay is escaped via `escapeHtml()` to prevent XSS. The UI is isolated from the host page through a closed Shadow DOM.
 
-## Struttura
+To report a vulnerability, see [SECURITY.md](./SECURITY.md).
 
-```
-manifest.json           Manifest V2 dell'estensione
-background/
-  background.js         Command listener, search API, navigazione
-content/
-  launcher.js           Overlay DOM, input, risultati, keyboard nav
-  launcher.css          Stili (iniettato nel Shadow DOM)
-src/
-  search-utils.js       Logica pura condivisa: highlight, dedup, format
-tests/
-  search-utils.test.js  Test logica pura
-  background.test.js    Test background script con browser API mock
-  launcher.test.js      Test UI launcher con jsdom
-icons/                  SVG placeholder (sostituire con PNG per release)
-```
+## License
 
-## Scorciatoie da tastiera
+Released under the Apache License 2.0. See [LICENSE](./LICENSE).
 
-| Tasto | Azione |
-|-------|--------|
-| `Ctrl+Shift+Space` | Apri/chiudi launcher |
-| Freccia giu / Tab | Risultato successivo |
-| Freccia su | Risultato precedente |
-| Enter | Apri risultato selezionato |
-| Ctrl+Enter | Apri in nuova scheda |
-| Esc | Chiudi launcher |
+## Support the project
 
-## Icone
-
-Le icone SVG in `icons/` sono placeholder. Per la release, sostituirle con file PNG nelle dimensioni 16x16, 32x32, 48x48, 96x96 e aggiornare i path nel `manifest.json` da `.svg` a `.png`.
-
-## Limitazioni (v1.0)
-
-- Ricerca solo nelle schede della finestra corrente
-- Nessuna ricerca full-text nel contenuto delle pagine
-- Nessuna pagina impostazioni (valori hardcoded)
-- Non funziona su pagine `about:`, `moz-extension:`, `file:`
+If you found this extension useful, consider giving it a star on GitHub.
