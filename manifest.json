@@ -30,8 +30,8 @@
   },
   "background": {
     "scripts": [
-      "src/search-utils.js",
       "src/config-storage.js",
+      "src/search-utils.js",
       "src/i18n.js",
       "background/background.js"
     ],
@@ -41,8 +41,8 @@
     {
       "matches": ["<all_urls>"],
       "js": [
-        "src/search-utils.js",
         "src/config-storage.js",
+        "src/search-utils.js",
         "src/i18n.js",
         "content/launcher.js"
       ],

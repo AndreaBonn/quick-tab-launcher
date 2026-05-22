@@ -3,17 +3,14 @@
  * Zero dipendenze browser - testabile in isolamento.
  */
 
-const QAL_CONFIG = {
-  MAX_TAB_RESULTS: 5,
-  MAX_BOOKMARK_RESULTS: 5,
-  MAX_HISTORY_RESULTS: 5,
-  DEBOUNCE_MS: 80,
-  HISTORY_DAYS: 30,
-  MIN_QUERY_LENGTH_EXTENDED: 2,
-  LOADING_THRESHOLD_MS: 300,
-  ENABLE_FULLTEXT_SEARCH: false,
-  FULLTEXT_MAX_LENGTH: 10000,
-};
+/* global QAL_CONFIG_DEFAULTS */
+
+const _defaults =
+  typeof QAL_CONFIG_DEFAULTS !== "undefined"
+    ? QAL_CONFIG_DEFAULTS
+    : require("./config-storage.js").QAL_CONFIG_DEFAULTS;
+
+const QAL_CONFIG = { ..._defaults };
 
 function escapeHtml(text) {
   if (!text) return "";
