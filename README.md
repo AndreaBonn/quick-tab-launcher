@@ -72,7 +72,6 @@ quick-tab-launcher__firefox/
 ├── popup/
 │   ├── popup.html            # Compact popup fallback for privileged pages
 │   ├── popup.js              # Popup interaction logic
-│   ├── popup-render.js       # Popup DOM rendering functions
 │   └── popup.css             # Popup styles (light/dark)
 ├── icons/                    # SVG icons (16/32/48/96)
 ├── tests/
