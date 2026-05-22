@@ -26,7 +26,10 @@ function mergeWithDefaults(defaults, userConfig) {
   const merged = { ...defaults };
   for (const key of Object.keys(defaults)) {
     if (Object.prototype.hasOwnProperty.call(userConfig, key)) {
-      merged[key] = userConfig[key];
+      const value = userConfig[key];
+      if (typeof value === typeof defaults[key]) {
+        merged[key] = value;
+      }
     }
   }
   return merged;
