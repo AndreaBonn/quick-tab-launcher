@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, escapeHtml, highlightMatch, formatUrl, buildFlatResults */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, escapeHtml, highlightMatch, formatUrl, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage */
 
 (function () {
   "use strict";
@@ -6,10 +6,11 @@
   const HOST_ELEMENT_ID = "qal-shadow-host";
   const FAVICON_FALLBACK_BASE =
     "https://www.google.com/s2/favicons?sz=16&domain=";
-  const SECTION_META = {
-    tabs: { icon: "\uD83D\uDCC2", title: "Schede aperte" },
-    bookmarks: { icon: "\u2B50", title: "Segnalibri" },
-    history: { icon: "\uD83D\uDD52", title: "Cronologia" },
+  const SECTION_KEYS = ["tabs", "bookmarks", "history"];
+  const SECTION_ICONS = {
+    tabs: "\uD83D\uDCC2",
+    bookmarks: "\u2B50",
+    history: "\uD83D\uDD52",
   };
 
   const state = {
@@ -56,11 +57,11 @@
     searchIcon.textContent = "\u2315";
     const input = createElement("input", "qal-input");
     input.type = "text";
-    input.placeholder = "Cerca schede, segnalibri, cronologia...";
+    input.placeholder = t("launcher.placeholder");
     input.autocomplete = "off";
     input.spellcheck = false;
     const shortcutHint = createElement("span", "qal-shortcut-hint");
-    shortcutHint.textContent = "ESC per chiudere";
+    shortcutHint.textContent = t("launcher.escHint");
 
     searchContainer.append(searchIcon, input, shortcutHint);
 
@@ -71,23 +72,40 @@
     overlay.append(backdrop, panel);
     state.shadowRoot.appendChild(overlay);
 
-    state.elements = { overlay, backdrop, input, results };
+    state.elements = {
+      overlay,
+      backdrop,
+      input,
+      results,
+      footer,
+      shortcutHint,
+    };
   }
 
   function createFooter() {
     const footer = createElement("div", "qal-footer");
-    const hints = [
-      "\u2191\u2193 naviga",
-      "\u21B5 apri",
-      "Ctrl+\u21B5 nuova scheda",
-      "ESC chiudi",
+    const keys = [
+      "launcher.footer.navigate",
+      "launcher.footer.open",
+      "launcher.footer.newTab",
+      "launcher.footer.close",
     ];
-    for (const hint of hints) {
+    for (const key of keys) {
       const span = document.createElement("span");
-      span.textContent = hint;
+      span.textContent = t(key);
+      span.dataset.i18n = key;
       footer.appendChild(span);
     }
     return footer;
+  }
+
+  function applyOverlayTranslations() {
+    state.elements.input.placeholder = t("launcher.placeholder");
+    state.elements.shortcutHint.textContent = t("launcher.escHint");
+    const footerSpans = state.elements.footer.querySelectorAll("[data-i18n]");
+    for (const span of footerSpans) {
+      span.textContent = t(span.dataset.i18n);
+    }
   }
 
   function createElement(tag, className) {
@@ -105,6 +123,10 @@
     browser.runtime.onMessage.addListener((message) => {
       if (message.action === "toggle") toggleLauncher();
       if (message.action === "close") closeLauncher();
+    });
+
+    onLocaleChange(() => {
+      applyOverlayTranslations();
     });
   }
 
@@ -264,7 +286,7 @@
   }
 
   function removeResultItem(itemEl, tabId) {
-    state.results.tabs = state.results.tabs.filter((t) => t.id !== tabId);
+    state.results.tabs = state.results.tabs.filter((tab) => tab.id !== tabId);
     state.flatResults = buildFlatResults(state.results);
 
     itemEl.remove();
@@ -311,7 +333,7 @@
 
     let globalIndex = 0;
 
-    for (const sectionKey of ["tabs", "bookmarks", "history"]) {
+    for (const sectionKey of SECTION_KEYS) {
       const items = results[sectionKey];
       if (items.length === 0) continue;
 
@@ -335,16 +357,15 @@
 
   function createSectionHeader(sectionKey, count) {
     const header = createElement("div", "qal-section-header");
-    const meta = SECTION_META[sectionKey];
 
     const icon = createElement("span", "qal-section-icon");
-    icon.textContent = meta.icon;
-    const title = createElement("span", "qal-section-title");
-    title.textContent = meta.title;
+    icon.textContent = SECTION_ICONS[sectionKey];
+    const titleEl = createElement("span", "qal-section-title");
+    titleEl.textContent = t(`sections.${sectionKey}`);
     const countEl = createElement("span", "qal-section-count");
     countEl.textContent = count;
 
-    header.append(icon, title, countEl);
+    header.append(icon, titleEl, countEl);
     return header;
   }
 
@@ -361,12 +382,12 @@
     if (item.isContentMatch) {
       const contentBadge = createElement("span", "qal-content-badge");
       contentBadge.textContent = "\u2261";
-      contentBadge.title = "Match nel contenuto";
+      contentBadge.title = t("badges.contentMatch");
       el.append(favicon, contentBadge, textContainer);
     } else if (sectionKey === "tabs" && item.isCurrentWindow === false) {
       const badge = createElement("span", "qal-window-badge");
       badge.textContent = "\u2197";
-      badge.title = "Altra finestra";
+      badge.title = t("badges.otherWindow");
       el.append(favicon, badge, textContainer);
     } else {
       el.append(favicon, textContainer);
@@ -376,7 +397,7 @@
       const actions = createElement("div", "qal-result-actions");
       const closeBtn = createElement("button", "qal-close-tab");
       closeBtn.textContent = "\u2715";
-      closeBtn.title = "Chiudi scheda";
+      closeBtn.title = t("badges.closeTab");
       actions.appendChild(closeBtn);
       el.appendChild(actions);
     }
@@ -410,18 +431,18 @@
 
   function createResultText(item, query) {
     const container = createElement("div", "qal-result-text");
-    const title = createElement("span", "qal-result-title");
-    title.innerHTML = highlightMatch(item.title || "", query);
+    const titleEl = createElement("span", "qal-result-title");
+    titleEl.innerHTML = highlightMatch(item.title || "", query);
     const url = createElement("span", "qal-result-url");
     url.innerHTML = highlightMatch(formatUrl(item.url || ""), query);
-    container.append(title, url);
+    container.append(titleEl, url);
     return container;
   }
 
   function renderEmpty() {
     state.elements.results.innerHTML = "";
     const empty = createElement("div", "qal-empty-state");
-    empty.textContent = "Inizia a digitare per cercare...";
+    empty.textContent = t("states.empty");
     state.elements.results.appendChild(empty);
   }
 
@@ -429,21 +450,21 @@
     state.elements.results.innerHTML = "";
     const empty = createElement("div", "qal-empty-state");
     const safeQuery = escapeHtml(query);
-    empty.innerHTML = `Nessun risultato per &laquo;${safeQuery}&raquo;`;
+    empty.innerHTML = t("states.noResults", { query: safeQuery });
     state.elements.results.appendChild(empty);
   }
 
   function renderLoading() {
     state.elements.results.innerHTML = "";
     const loading = createElement("div", "qal-loading");
-    loading.textContent = "Ricerca in corso...";
+    loading.textContent = t("states.loading");
     state.elements.results.appendChild(loading);
   }
 
   function renderError() {
     state.elements.results.innerHTML = "";
     const error = createElement("div", "qal-empty-state");
-    error.textContent = "Errore durante la ricerca. Riprova.";
+    error.textContent = t("states.error");
     state.elements.results.appendChild(error);
   }
 
@@ -459,14 +480,23 @@
   }
 
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area !== "local" || !changes[CONFIG_STORAGE_KEY]) return;
-    const userConfig = changes[CONFIG_STORAGE_KEY].newValue ?? {};
-    const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
-    applyConfigToGlobal(QAL_CONFIG, merged);
+    if (area !== "local") return;
+    if (changes[CONFIG_STORAGE_KEY]) {
+      const userConfig = changes[CONFIG_STORAGE_KEY].newValue ?? {};
+      const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
+      applyConfigToGlobal(QAL_CONFIG, merged);
+    }
+    if (changes[I18N_STORAGE_KEY]) {
+      const newLang = changes[I18N_STORAGE_KEY].newValue;
+      if (newLang && I18N_SUPPORTED_LOCALES.includes(newLang)) {
+        setLocaleFromStorage(newLang);
+        applyOverlayTranslations();
+      }
+    }
   });
 
   async function bootstrap() {
-    await loadConfig();
+    await Promise.all([loadConfig(), loadLocale()]);
     init();
   }
 

@@ -32,6 +32,7 @@
     "scripts": [
       "src/search-utils.js",
       "src/config-storage.js",
+      "src/i18n.js",
       "background/background.js"
     ],
     "persistent": false
@@ -42,6 +43,7 @@
       "js": [
         "src/search-utils.js",
         "src/config-storage.js",
+        "src/i18n.js",
         "content/launcher.js"
       ],
       "run_at": "document_end"

@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG_DEFAULTS, CONFIG_STORAGE_KEY, mergeWithDefaults */
+/* global browser, QAL_CONFIG_DEFAULTS, CONFIG_STORAGE_KEY, mergeWithDefaults, t, loadLocale, setLocale, getLocale, applyTranslations, onLocaleChange */
 
 const FIELD_MAP = [
   {
@@ -90,6 +90,28 @@ function showFeedback(message, isError = false) {
   }, 3000);
 }
 
+function updateLocaleSwitcher() {
+  const current = getLocale();
+  const buttons = document.querySelectorAll(".qal-locale-btn");
+  for (const btn of buttons) {
+    btn.classList.toggle(
+      "qal-locale-btn--active",
+      btn.dataset.locale === current,
+    );
+  }
+}
+
+function setupLocaleSwitcher() {
+  const switcher = document.getElementById("qal-locale-switcher");
+  if (!switcher) return;
+  switcher.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".qal-locale-btn");
+    if (!btn) return;
+    await setLocale(btn.dataset.locale);
+  });
+  updateLocaleSwitcher();
+}
+
 async function loadSettings() {
   const result = await browser.storage.local.get(CONFIG_STORAGE_KEY);
   const userConfig = result[CONFIG_STORAGE_KEY] ?? {};
@@ -101,20 +123,23 @@ async function saveSettings(event) {
   event.preventDefault();
   const values = readFormValues();
   if (!validateValues(values)) {
-    showFeedback("Valori non validi. Controlla i campi.", true);
+    showFeedback(t("options.feedback.invalid"), true);
     return;
   }
   await browser.storage.local.set({ [CONFIG_STORAGE_KEY]: values });
-  showFeedback("Impostazioni salvate.");
+  showFeedback(t("options.feedback.saved"));
 }
 
 async function resetDefaults() {
   await browser.storage.local.remove(CONFIG_STORAGE_KEY);
   populateForm(QAL_CONFIG_DEFAULTS);
-  showFeedback("Impostazioni ripristinate ai valori predefiniti.");
+  showFeedback(t("options.feedback.reset"));
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadLocale();
+  applyTranslations(document);
+  setupLocaleSwitcher();
   loadSettings();
 
   const form = document.getElementById("qal-options-form");
@@ -122,4 +147,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const resetBtn = document.getElementById("qal-reset-btn");
   if (resetBtn) resetBtn.addEventListener("click", resetDefaults);
+
+  onLocaleChange(() => {
+    applyTranslations(document);
+    updateLocaleSwitcher();
+  });
 });

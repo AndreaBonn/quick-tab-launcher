@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderResults, renderEmpty, renderLoading, renderError, updateSelection, reindexItems */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderResults, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange */
 
 const state = {
   results: { tabs: [], bookmarks: [], history: [] },
@@ -70,7 +70,12 @@ function handleInput() {
       state.results = results;
       state.flatResults = buildFlatResults(results);
       state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
-      renderResults(state.elements.results, results, query, state.selectedIndex);
+      renderResults(
+        state.elements.results,
+        results,
+        query,
+        state.selectedIndex,
+      );
     } catch (err) {
       clearTimeout(state.loadingTimeout);
       console.error("Quick Actions Launcher popup: search error", err);
@@ -95,7 +100,10 @@ function handleKeydown(e) {
     case "Enter":
       e.preventDefault();
       if (state.selectedIndex >= 0) {
-        navigateTo(state.flatResults[state.selectedIndex], e.ctrlKey || e.metaKey);
+        navigateTo(
+          state.flatResults[state.selectedIndex],
+          e.ctrlKey || e.metaKey,
+        );
       }
       break;
     case "Escape":
@@ -122,7 +130,11 @@ function selectPrev() {
 
 function navigateTo(item, forceNewTab) {
   if (item.type === "tab") {
-    browser.runtime.sendMessage({ action: "navigate", type: "tab", tabId: item.id });
+    browser.runtime.sendMessage({
+      action: "navigate",
+      type: "tab",
+      tabId: item.id,
+    });
   } else {
     browser.runtime.sendMessage({
       action: "navigate",
@@ -159,7 +171,9 @@ function removeResultItem(itemEl, tabId) {
   state.flatResults = buildFlatResults(state.results);
   itemEl.remove();
 
-  const tabSection = document.querySelector('.qal-section[data-section="tabs"]');
+  const tabSection = document.querySelector(
+    '.qal-section[data-section="tabs"]',
+  );
   if (tabSection) {
     const remainingItems = tabSection.querySelectorAll(".qal-result-item");
     if (remainingItems.length === 0) {
@@ -179,6 +193,12 @@ function removeResultItem(itemEl, tabId) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadConfig();
+  await Promise.all([loadConfig(), loadLocale()]);
+  applyTranslations(document);
   init();
+
+  onLocaleChange(() => {
+    applyTranslations(document);
+    renderEmpty(state.elements.results);
+  });
 });

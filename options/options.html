@@ -3,27 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Impostazioni - Quick Actions Launcher</title>
+    <title data-i18n="options.title">Quick Actions Launcher</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <div class="qal-options-container">
       <header class="qal-options-header">
-        <h1 class="qal-options-title">Quick Actions Launcher</h1>
-        <p class="qal-options-subtitle">Impostazioni</p>
+        <div class="qal-options-header-row">
+          <div>
+            <h1 class="qal-options-title" data-i18n="options.title"></h1>
+            <p class="qal-options-subtitle" data-i18n="options.subtitle"></p>
+          </div>
+          <div class="qal-locale-switcher" id="qal-locale-switcher">
+            <button
+              type="button"
+              class="qal-locale-btn"
+              data-locale="it"
+              title="Italiano"
+            >
+              &#x1F1EE;&#x1F1F9;
+            </button>
+            <button
+              type="button"
+              class="qal-locale-btn"
+              data-locale="en"
+              title="English"
+            >
+              &#x1F1FA;&#x1F1F8;
+            </button>
+          </div>
+        </div>
       </header>
 
       <main>
         <form id="qal-options-form" class="qal-options-form" novalidate>
           <fieldset class="qal-options-fieldset">
-            <legend class="qal-options-legend">Risultati per tipo</legend>
+            <legend
+              class="qal-options-legend"
+              data-i18n="options.legend.resultsByType"
+            ></legend>
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-max-tab-results">
-                Schede aperte
-                <span class="qal-options-hint"
-                  >Massimo risultati da schede aperte</span
-                >
+                <span data-i18n="options.label.openTabs"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.openTabs"
+                ></span>
               </label>
               <input
                 class="qal-options-input"
@@ -38,10 +64,11 @@
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-max-bookmark-results">
-                Segnalibri
-                <span class="qal-options-hint"
-                  >Massimo risultati da segnalibri</span
-                >
+                <span data-i18n="options.label.bookmarks"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.bookmarks"
+                ></span>
               </label>
               <input
                 class="qal-options-input"
@@ -56,10 +83,11 @@
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-max-history-results">
-                Cronologia
-                <span class="qal-options-hint"
-                  >Massimo risultati dalla cronologia</span
-                >
+                <span data-i18n="options.label.history"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.history"
+                ></span>
               </label>
               <input
                 class="qal-options-input"
@@ -74,7 +102,10 @@
           </fieldset>
 
           <fieldset class="qal-options-fieldset">
-            <legend class="qal-options-legend">Comportamento</legend>
+            <legend
+              class="qal-options-legend"
+              data-i18n="options.legend.behavior"
+            ></legend>
 
             <div class="qal-options-field">
               <label
@@ -86,21 +117,21 @@
                   class="qal-options-checkbox"
                   id="qal-enable-fulltext-search"
                 />
-                Ricerca nel contenuto delle schede
-                <span class="qal-options-hint"
-                  >Cerca anche nel testo delle pagine aperte (piu lento con
-                  molte schede)</span
-                >
+                <span data-i18n="options.label.fulltextSearch"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.fulltextSearch"
+                ></span>
               </label>
             </div>
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-debounce-ms">
-                Ritardo ricerca (ms)
-                <span class="qal-options-hint"
-                  >Attesa prima di avviare la ricerca durante la digitazione
-                  (0-2000)</span
-                >
+                <span data-i18n="options.label.debounce"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.debounce"
+                ></span>
               </label>
               <input
                 class="qal-options-input"
@@ -115,11 +146,11 @@
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-history-days">
-                Giorni cronologia
-                <span class="qal-options-hint"
-                  >Quanti giorni di cronologia includere nella ricerca
-                  (1-365)</span
-                >
+                <span data-i18n="options.label.historyDays"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.historyDays"
+                ></span>
               </label>
               <input
                 class="qal-options-input"
@@ -134,11 +165,11 @@
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-min-query-length">
-                Caratteri minimi per segnalibri e cronologia
-                <span class="qal-options-hint"
-                  >Lunghezza minima della query per cercare in segnalibri e
-                  cronologia (1-10)</span
-                >
+                <span data-i18n="options.label.minQueryLength"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.minQueryLength"
+                ></span>
               </label>
               <input
                 class="qal-options-input"
@@ -153,11 +184,11 @@
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-loading-threshold-ms">
-                Soglia indicatore caricamento (ms)
-                <span class="qal-options-hint"
-                  >Attesa prima di mostrare l'indicatore di caricamento
-                  (0-5000)</span
-                >
+                <span data-i18n="options.label.loadingThreshold"></span>
+                <span
+                  class="qal-options-hint"
+                  data-i18n="options.hint.loadingThreshold"
+                ></span>
               </label>
               <input
                 class="qal-options-input"
@@ -182,16 +213,14 @@
               type="submit"
               class="qal-options-btn qal-options-btn--primary"
               id="qal-save-btn"
-            >
-              Salva impostazioni
-            </button>
+              data-i18n="options.btn.save"
+            ></button>
             <button
               type="button"
               class="qal-options-btn qal-options-btn--secondary"
               id="qal-reset-btn"
-            >
-              Ripristina predefiniti
-            </button>
+              data-i18n="options.btn.reset"
+            ></button>
           </div>
         </form>
       </main>
@@ -199,6 +228,7 @@
 
     <script src="../src/search-utils.js"></script>
     <script src="../src/config-storage.js"></script>
+    <script src="../src/i18n.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

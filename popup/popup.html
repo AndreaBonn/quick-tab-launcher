@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
@@ -13,23 +13,25 @@
         <input
           type="text"
           class="qal-input"
-          placeholder="Cerca schede, segnalibri, cronologia..."
+          data-i18n-placeholder="launcher.placeholder"
           autocomplete="off"
           spellcheck="false"
         />
-        <span class="qal-shortcut-hint">ESC per chiudere</span>
+        <span class="qal-shortcut-hint" data-i18n="launcher.escHint"></span>
       </div>
       <div class="qal-results"></div>
       <div class="qal-footer">
-        <span>&#x2191;&#x2193; naviga</span>
-        <span>&#x21B5; apri</span>
-        <span>Ctrl+&#x21B5; nuova scheda</span>
-        <span>ESC chiudi</span>
+        <span data-i18n="launcher.footer.navigate"></span>
+        <span data-i18n="launcher.footer.open"></span>
+        <span data-i18n="launcher.footer.newTab"></span>
+        <span data-i18n="launcher.footer.close"></span>
       </div>
     </div>
 
     <script src="../src/search-utils.js"></script>
     <script src="../src/config-storage.js"></script>
+    <script src="../src/i18n.js"></script>
+    <script src="popup-render.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

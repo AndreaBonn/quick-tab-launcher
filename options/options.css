@@ -55,6 +55,41 @@ body {
   margin-bottom: 28px;
 }
 
+.qal-options-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.qal-locale-switcher {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.qal-locale-btn {
+  background: var(--qal-bg);
+  border: 1px solid var(--qal-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
+  line-height: 1;
+}
+
+.qal-locale-btn:hover {
+  opacity: 0.8;
+}
+
+.qal-locale-btn--active {
+  opacity: 1;
+  border-color: var(--qal-accent);
+}
+
 .qal-options-title {
   font-size: 18px;
   font-weight: 600;

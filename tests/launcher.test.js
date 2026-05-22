@@ -15,6 +15,18 @@ const {
   applyConfigToGlobal,
 } = require("../src/config-storage.js");
 
+const {
+  I18N_STORAGE_KEY,
+  I18N_SUPPORTED_LOCALES,
+  t,
+  getLocale,
+  loadLocale,
+  setLocale,
+  setLocaleFromStorage,
+  onLocaleChange,
+  applyTranslations,
+} = require("../src/i18n.js");
+
 /**
  * Creates a minimal browser mock for content script testing.
  */
@@ -55,6 +67,15 @@ async function loadLauncher(browserMock) {
   globalThis.highlightMatch = highlightMatch;
   globalThis.formatUrl = formatUrl;
   globalThis.buildFlatResults = buildFlatResults;
+  globalThis.I18N_STORAGE_KEY = I18N_STORAGE_KEY;
+  globalThis.I18N_SUPPORTED_LOCALES = I18N_SUPPORTED_LOCALES;
+  globalThis.t = t;
+  globalThis.getLocale = getLocale;
+  globalThis.loadLocale = loadLocale;
+  globalThis.setLocale = setLocale;
+  globalThis.onLocaleChange = onLocaleChange;
+  globalThis.applyTranslations = applyTranslations;
+  globalThis.setLocaleFromStorage = setLocaleFromStorage;
 
   let capturedShadowRoot = null;
   const originalAttachShadow = HTMLElement.prototype.attachShadow;

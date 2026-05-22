@@ -6,6 +6,15 @@ const {
   mergeWithDefaults,
 } = require("../src/config-storage.js");
 
+const {
+  t,
+  getLocale,
+  loadLocale,
+  setLocale,
+  onLocaleChange,
+  applyTranslations,
+} = require("../src/i18n.js");
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -43,6 +52,12 @@ function loadOptionsPage(browserMock) {
   globalThis.QAL_CONFIG_DEFAULTS = QAL_CONFIG_DEFAULTS;
   globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
   globalThis.mergeWithDefaults = mergeWithDefaults;
+  globalThis.t = t;
+  globalThis.getLocale = getLocale;
+  globalThis.loadLocale = loadLocale;
+  globalThis.setLocale = setLocale;
+  globalThis.onLocaleChange = onLocaleChange;
+  globalThis.applyTranslations = applyTranslations;
 
   // Minimal DOM matching options.html structure
   document.body.innerHTML = `

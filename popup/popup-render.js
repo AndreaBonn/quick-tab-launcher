@@ -1,10 +1,12 @@
-/* global escapeHtml, highlightMatch, formatUrl */
+/* global escapeHtml, highlightMatch, formatUrl, t */
 
-const FAVICON_FALLBACK_BASE = "https://www.google.com/s2/favicons?sz=16&domain=";
-const SECTION_META = {
-  tabs: { icon: "\uD83D\uDCC2", title: "Schede aperte" },
-  bookmarks: { icon: "\u2B50", title: "Segnalibri" },
-  history: { icon: "\uD83D\uDD52", title: "Cronologia" },
+const FAVICON_FALLBACK_BASE =
+  "https://www.google.com/s2/favicons?sz=16&domain=";
+const SECTION_KEYS = ["tabs", "bookmarks", "history"];
+const SECTION_ICONS = {
+  tabs: "\uD83D\uDCC2",
+  bookmarks: "\u2B50",
+  history: "\uD83D\uDD52",
 };
 
 function createElement(tag, className) {
@@ -15,11 +17,10 @@ function createElement(tag, className) {
 
 function createSectionHeader(sectionKey, count) {
   const header = createElement("div", "qal-section-header");
-  const meta = SECTION_META[sectionKey];
   const icon = createElement("span", "qal-section-icon");
-  icon.textContent = meta.icon;
+  icon.textContent = SECTION_ICONS[sectionKey];
   const title = createElement("span", "qal-section-title");
-  title.textContent = meta.title;
+  title.textContent = t(`sections.${sectionKey}`);
   const countEl = createElement("span", "qal-section-count");
   countEl.textContent = count;
   header.append(icon, title, countEl);
@@ -68,12 +69,12 @@ function createResultItem(item, sectionKey, query, index) {
   if (item.isContentMatch) {
     const contentBadge = createElement("span", "qal-content-badge");
     contentBadge.textContent = "\u2261";
-    contentBadge.title = "Match nel contenuto";
+    contentBadge.title = t("badges.contentMatch");
     el.append(favicon, contentBadge, textContainer);
   } else if (sectionKey === "tabs" && item.isCurrentWindow === false) {
     const badge = createElement("span", "qal-window-badge");
     badge.textContent = "\u2197";
-    badge.title = "Altra finestra";
+    badge.title = t("badges.otherWindow");
     el.append(favicon, badge, textContainer);
   } else {
     el.append(favicon, textContainer);
@@ -82,7 +83,7 @@ function createResultItem(item, sectionKey, query, index) {
     const actions = createElement("div", "qal-result-actions");
     const closeBtn = createElement("button", "qal-close-tab");
     closeBtn.textContent = "\u2715";
-    closeBtn.title = "Chiudi scheda";
+    closeBtn.title = t("badges.closeTab");
     actions.appendChild(closeBtn);
     el.appendChild(actions);
   }
@@ -98,14 +99,16 @@ function renderResults(container, results, query, selectedIndex) {
     return;
   }
   let globalIndex = 0;
-  for (const sectionKey of ["tabs", "bookmarks", "history"]) {
+  for (const sectionKey of SECTION_KEYS) {
     const items = results[sectionKey];
     if (items.length === 0) continue;
     const section = createElement("div", "qal-section");
     section.dataset.section = sectionKey;
     section.appendChild(createSectionHeader(sectionKey, items.length));
     for (const item of items) {
-      section.appendChild(createResultItem(item, sectionKey, query, globalIndex));
+      section.appendChild(
+        createResultItem(item, sectionKey, query, globalIndex),
+      );
       globalIndex++;
     }
     container.appendChild(section);
@@ -116,7 +119,7 @@ function renderResults(container, results, query, selectedIndex) {
 function renderEmpty(container) {
   container.innerHTML = "";
   const empty = createElement("div", "qal-empty-state");
-  empty.textContent = "Inizia a digitare per cercare...";
+  empty.textContent = t("states.empty");
   container.appendChild(empty);
 }
 
@@ -124,21 +127,21 @@ function renderNoResults(container, query) {
   container.innerHTML = "";
   const empty = createElement("div", "qal-empty-state");
   const safeQuery = escapeHtml(query);
-  empty.innerHTML = `Nessun risultato per &laquo;${safeQuery}&raquo;`;
+  empty.innerHTML = t("states.noResults", { query: safeQuery });
   container.appendChild(empty);
 }
 
 function renderLoading(container) {
   container.innerHTML = "";
   const loading = createElement("div", "qal-loading");
-  loading.textContent = "Ricerca in corso...";
+  loading.textContent = t("states.loading");
   container.appendChild(loading);
 }
 
 function renderError(container) {
   container.innerHTML = "";
   const error = createElement("div", "qal-empty-state");
-  error.textContent = "Errore durante la ricerca. Riprova.";
+  error.textContent = t("states.error");
   container.appendChild(error);
 }
 
