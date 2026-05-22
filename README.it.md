@@ -1,6 +1,6 @@
 [English](./README.md) | **Italiano**
 
-# Quick Actions Launcher
+# Quick TAB Launcher by Bonn
 
 Estensione Firefox che aggiunge una palette comandi in stile Spotlight per cercare schede aperte, segnalibri e cronologia con una scorciatoia da tastiera.
 

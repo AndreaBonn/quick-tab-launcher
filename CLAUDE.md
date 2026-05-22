@@ -1,4 +1,4 @@
-# Quick Actions Launcher - CLAUDE.md
+# Quick TAB Launcher by Bonn - CLAUDE.md
 
 ## Stack
 

@@ -1,20 +1,20 @@
 {
   "manifest_version": 2,
-  "name": "Quick Actions Launcher",
+  "name": "Quick TAB Launcher by Bonn",
   "version": "2.0.0",
   "description": "Palette comandi Spotlight-style per cercare schede, segnalibri e cronologia con una scorciatoia.",
   "icons": {
-    "16": "icons/icon-16.svg",
-    "32": "icons/icon-32.svg",
-    "48": "icons/icon-48.svg",
-    "96": "icons/icon-96.svg"
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
   },
   "browser_action": {
     "default_icon": {
-      "16": "icons/icon-16.svg",
-      "32": "icons/icon-32.svg"
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
     },
-    "default_title": "Quick Actions Launcher"
+    "default_title": "Quick TAB Launcher by Bonn"
   },
   "permissions": [
     "tabs",
@@ -63,7 +63,7 @@
         "default": "Ctrl+Shift+Space",
         "mac": "MacCtrl+Shift+Space"
       },
-      "description": "Apri/chiudi Quick Actions Launcher"
+      "description": "Apri/chiudi Quick TAB Launcher by Bonn"
     }
   },
   "browser_specific_settings": {

@@ -1,6 +1,6 @@
 **English** | [Italiano](./README.it.md)
 
-# Quick Actions Launcher
+# Quick TAB Launcher by Bonn
 
 A Firefox extension that adds a Spotlight-style command palette for searching open tabs, bookmarks, and browsing history from a single keyboard shortcut.
 

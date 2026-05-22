@@ -131,7 +131,7 @@
       stored.ENABLE_FULLTEXT_SEARCH = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
       await saveUserConfig(stored);
     } catch (err) {
-      console.warn("Quick Actions Launcher: config save failed", err);
+      console.warn("Quick TAB Launcher: config save failed", err);
     }
     retriggerSearch();
   }
@@ -220,7 +220,7 @@
         updateSelection(state.elements.results, state.selectedIndex);
       }
     } catch (err) {
-      console.warn("Quick Actions Launcher: recent tabs unavailable", err);
+      console.warn("Quick TAB Launcher: recent tabs unavailable", err);
     }
   }
 
@@ -232,7 +232,7 @@
       if (!state.isVisible || result.count <= 0) return;
       renderDuplicateBanner(state.elements.results, result.count);
     } catch (err) {
-      console.warn("Quick Actions Launcher: duplicate check failed", err);
+      console.warn("Quick TAB Launcher: duplicate check failed", err);
     }
   }
 
@@ -275,7 +275,7 @@
         renderCurrentView(query);
       } catch (err) {
         clearTimeout(state.loadingTimeout);
-        console.error("Quick Actions Launcher: search error", err);
+        console.error("Quick TAB Launcher: search error", err);
         renderError(state.elements.results);
       }
     }, QAL_CONFIG.DEBOUNCE_MS);
@@ -482,7 +482,7 @@
       const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
       applyConfigToGlobal(QAL_CONFIG, merged);
     } catch (err) {
-      console.warn("Quick Actions Launcher: config load failed", err);
+      console.warn("Quick TAB Launcher: config load failed", err);
     }
   }
 

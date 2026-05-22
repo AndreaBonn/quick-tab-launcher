@@ -25,7 +25,7 @@ async function updatePopupForTab(tabId) {
       await browser.browserAction.setPopup({ popup: "" });
     }
   } catch (err) {
-    console.warn("Quick Actions Launcher: popup update failed", err);
+    console.warn("Quick TAB Launcher: popup update failed", err);
   }
 }
 
@@ -53,7 +53,7 @@ async function toggleLauncher() {
     if (!activeTab?.id) return;
     await browser.tabs.sendMessage(activeTab.id, { action: "toggle" });
   } catch (err) {
-    console.log("Quick Actions Launcher: pagina non supportata", err.message);
+    console.log("Quick TAB Launcher: pagina non supportata", err.message);
   }
 }
 
@@ -198,7 +198,7 @@ async function extractTabContent(tabId) {
     const raw = results[0] ? String(results[0]) : "";
     return raw.substring(0, QAL_CONFIG.FULLTEXT_MAX_LENGTH).toLowerCase();
   } catch (err) {
-    console.warn("Quick Actions Launcher: content extraction failed", err);
+    console.warn("Quick TAB Launcher: content extraction failed", err);
     return "";
   }
 }
@@ -302,7 +302,7 @@ async function handleNavigate(message, senderTabId) {
       await browser.tabs.sendMessage(senderTabId, { action: "close" });
     }
   } catch (err) {
-    console.log("Quick Actions Launcher: navigazione fallita", err.message);
+    console.log("Quick TAB Launcher: navigazione fallita", err.message);
   }
 }
 
@@ -310,7 +310,7 @@ async function handleCloseTab(tabId) {
   try {
     await browser.tabs.remove(tabId);
   } catch (err) {
-    console.log("Quick Actions Launcher: chiusura tab fallita", err.message);
+    console.log("Quick TAB Launcher: chiusura tab fallita", err.message);
   }
 }
 

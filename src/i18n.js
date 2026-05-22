@@ -55,7 +55,7 @@ const I18N_MESSAGES = {
     "commands.sort-tabs-title": "Ordina schede per titolo",
     "commands.sort-tabs-title.desc":
       "Riordina le schede nella finestra per titolo",
-    "options.title": "Quick Actions Launcher",
+    "options.title": "Quick TAB Launcher by Bonn",
     "options.subtitle": "Impostazioni",
     "options.legend.resultsByType": "Risultati per tipo",
     "options.legend.behavior": "Comportamento",
@@ -133,7 +133,7 @@ const I18N_MESSAGES = {
     "commands.duplicate-tab.desc": "Create a copy of current tab",
     "commands.sort-tabs-title": "Sort tabs by title",
     "commands.sort-tabs-title.desc": "Reorder tabs in window by title",
-    "options.title": "Quick Actions Launcher",
+    "options.title": "Quick TAB Launcher by Bonn",
     "options.subtitle": "Settings",
     "options.legend.resultsByType": "Results by type",
     "options.legend.behavior": "Behavior",

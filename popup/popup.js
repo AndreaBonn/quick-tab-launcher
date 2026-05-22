@@ -126,7 +126,7 @@ function handleInput() {
       );
     } catch (err) {
       clearTimeout(state.loadingTimeout);
-      console.error("Quick Actions Launcher popup: search error", err);
+      console.error("Quick TAB Launcher popup: search error", err);
       renderError(state.elements.results);
     }
   }, QAL_CONFIG.DEBOUNCE_MS);
