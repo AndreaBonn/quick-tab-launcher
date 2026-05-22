@@ -36,17 +36,16 @@ jobs:
         run: |
           node -e "
           const fs = require('fs');
-          const { DOMParser } = require('jsdom');
           const xml = fs.readFileSync('test-results.xml', 'utf8');
-          const doc = new DOMParser().parseFromString(xml, 'text/xml');
-          const suites = doc.documentElement.tagName === 'testsuites'
-            ? Array.from(doc.querySelectorAll('testsuite'))
-            : [doc.documentElement];
           let tests = 0, failures = 0, errors = 0;
-          for (const s of suites) {
-            tests += parseInt(s.getAttribute('tests') || '0');
-            failures += parseInt(s.getAttribute('failures') || '0');
-            errors += parseInt(s.getAttribute('errors') || '0');
+          const re = /<testsuite [^>]*>/g;
+          let m;
+          while ((m = re.exec(xml)) !== null) {
+            const tag = m[0];
+            const attr = (name) => parseInt((tag.match(new RegExp(name + '=\"(\\d+)\"')) || [])[1] || '0');
+            tests += attr('tests');
+            failures += attr('failures');
+            errors += attr('errors');
           }
           const passed = tests - failures - errors;
           const failed = failures + errors;
