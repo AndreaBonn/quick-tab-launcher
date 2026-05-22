@@ -9,6 +9,10 @@ A Firefox extension that adds a Spotlight-style command palette for searching op
 ![Firefox](https://img.shields.io/badge/firefox-%3E%3D91-ff7139)
 ![Manifest](https://img.shields.io/badge/manifest-v2-lightgrey)
 
+<p align="center">
+  <img src="docs/amo-submission/screenshots/screenshot-search-dark.png" alt="Fuzzy search across tabs, bookmarks and history" width="600">
+</p>
+
 Type `Ctrl+Shift+Space` (or click the toolbar icon) to open an overlay panel. Start typing to filter across tabs, bookmarks, and history simultaneously. Results are grouped by source, deduplicated, and navigable with keyboard or mouse.
 
 ## Tech stack
@@ -120,6 +124,16 @@ Package the extension into an `.xpi` file and install it through Firefox Add-ons
 | Dismiss the launcher     | `Escape` or click the backdrop     |
 
 The keyboard shortcut opens the full-screen overlay on regular pages. On privileged pages (`about:`, `moz-extension:`, `file:`), clicking the toolbar icon opens a compact popup fallback with identical functionality.
+
+<p align="center">
+  <img src="docs/amo-submission/screenshots/screenshot-commands-dark.png" alt="Command palette" width="600">
+</p>
+
+Type `>` to access the command palette: sort tabs, close duplicates, mute/unmute, pin, and more.
+
+<p align="center">
+  <img src="docs/amo-submission/screenshots/screenshot-search-light.png" alt="Light mode with duplicate detection" width="600">
+</p>
 
 Bookmarks and history search activate after 2+ characters. Results are capped at 5 per category and deduplicated across sources (tabs take priority over bookmarks, bookmarks over history).
 

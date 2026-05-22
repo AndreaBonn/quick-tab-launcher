@@ -9,6 +9,10 @@ Estensione Firefox che aggiunge una palette comandi in stile Spotlight per cerca
 ![Firefox](https://img.shields.io/badge/firefox-%3E%3D91-ff7139)
 ![Manifest](https://img.shields.io/badge/manifest-v2-lightgrey)
 
+<p align="center">
+  <img src="docs/amo-submission/screenshots/screenshot-search-dark.png" alt="Ricerca fuzzy tra schede, segnalibri e cronologia" width="600">
+</p>
+
 Premi `Ctrl+Shift+Space` (o clicca l'icona nella toolbar) per aprire un pannello overlay. Digita per filtrare contemporaneamente schede, segnalibri e cronologia. I risultati sono raggruppati per fonte, deduplicati e navigabili da tastiera o mouse.
 
 ## Stack tecnologico
@@ -120,6 +124,16 @@ Pacchettizza l'estensione in un file `.xpi` e installala tramite i componenti ag
 | Chiudi il launcher              | `Escape` o clicca sullo sfondo         |
 
 La scorciatoia da tastiera apre l'overlay a schermo intero sulle pagine normali. Sulle pagine privilegiate (`about:`, `moz-extension:`, `file:`), il click sull'icona nella toolbar apre un popup compatto con le stesse funzionalita.
+
+<p align="center">
+  <img src="docs/amo-submission/screenshots/screenshot-commands-dark.png" alt="Palette comandi" width="600">
+</p>
+
+Digita `>` per accedere alla palette comandi: ordina schede, chiudi duplicati, muta/smuta, fissa e altro.
+
+<p align="center">
+  <img src="docs/amo-submission/screenshots/screenshot-search-light.png" alt="Tema chiaro con rilevamento duplicati" width="600">
+</p>
 
 La ricerca in segnalibri e cronologia si attiva dopo 2+ caratteri. I risultati sono limitati a 5 per categoria e deduplicati tra le fonti (le schede hanno priorita sui segnalibri, i segnalibri sulla cronologia).
 
