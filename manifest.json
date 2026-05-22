@@ -44,6 +44,7 @@
         "src/config-storage.js",
         "src/search-utils.js",
         "src/i18n.js",
+        "src/render-utils.js",
         "content/launcher.js"
       ],
       "run_at": "document_end"

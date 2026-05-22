@@ -1,17 +1,9 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, escapeHtml, highlightMatch, formatUrl, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, createElement, renderResults, renderEmpty, renderLoading, renderError, updateSelection, reindexItems */
 
 (function () {
   "use strict";
 
   const HOST_ELEMENT_ID = "qal-shadow-host";
-  const FAVICON_FALLBACK_BASE =
-    "https://www.google.com/s2/favicons?sz=16&domain=";
-  const SECTION_KEYS = ["tabs", "bookmarks", "history"];
-  const SECTION_ICONS = {
-    tabs: "\uD83D\uDCC2",
-    bookmarks: "\u2B50",
-    history: "\uD83D\uDD52",
-  };
 
   const state = {
     isVisible: false,
@@ -118,12 +110,6 @@
     }
   }
 
-  function createElement(tag, className) {
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    return el;
-  }
-
   function updateFulltextToggleState(btn) {
     const isOn = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
     btn.classList.toggle("qal-fulltext-active", isOn);
@@ -188,7 +174,7 @@
     state.selectedIndex = -1;
     state.flatResults = [];
     updateFulltextToggleState(state.elements.fulltextToggle);
-    renderEmpty();
+    renderEmpty(state.elements.results);
 
     requestAnimationFrame(() => {
       state.elements.input.focus();
@@ -212,12 +198,12 @@
     const query = state.elements.input.value;
 
     if (!query.trim()) {
-      renderEmpty();
+      renderEmpty(state.elements.results);
       return;
     }
 
     state.loadingTimeout = setTimeout(() => {
-      renderLoading();
+      renderLoading(state.elements.results);
     }, QAL_CONFIG.LOADING_THRESHOLD_MS);
 
     state.searchTimeout = setTimeout(async () => {
@@ -230,11 +216,16 @@
         state.results = results;
         state.flatResults = buildFlatResults(results);
         state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
-        renderResults(results, query);
+        renderResults(
+          state.elements.results,
+          results,
+          query,
+          state.selectedIndex,
+        );
       } catch (err) {
         clearTimeout(state.loadingTimeout);
         console.error("Quick Actions Launcher: search error", err);
-        renderError();
+        renderError(state.elements.results);
       }
     }, QAL_CONFIG.DEBOUNCE_MS);
   }
@@ -275,7 +266,7 @@
   function selectNext() {
     if (state.flatResults.length === 0) return;
     state.selectedIndex = (state.selectedIndex + 1) % state.flatResults.length;
-    updateSelection();
+    updateSelection(state.elements.results, state.selectedIndex);
   }
 
   function selectPrev() {
@@ -284,20 +275,7 @@
       state.selectedIndex <= 0
         ? state.flatResults.length - 1
         : state.selectedIndex - 1;
-    updateSelection();
-  }
-
-  function updateSelection() {
-    const items = state.shadowRoot.querySelectorAll(".qal-result-item");
-    for (let i = 0; i < items.length; i++) {
-      const isSelected = i === state.selectedIndex;
-      items[i].classList.toggle("qal-selected", isSelected);
-      items[i].setAttribute("aria-selected", String(isSelected));
-    }
-    const selected = items[state.selectedIndex];
-    if (selected?.scrollIntoView) {
-      selected.scrollIntoView({ block: "nearest" });
-    }
+    updateSelection(state.elements.results, state.selectedIndex);
   }
 
   function navigateTo(item, forceNewTab) {
@@ -343,7 +321,7 @@
 
     itemEl.remove();
 
-    const tabSection = state.shadowRoot.querySelector(
+    const tabSection = state.elements.results.querySelector(
       '.qal-section[data-section="tabs"]',
     );
     if (tabSection) {
@@ -356,170 +334,12 @@
       }
     }
 
-    reindexItems();
+    reindexItems(state.elements.results);
 
     if (state.selectedIndex >= state.flatResults.length) {
       state.selectedIndex = state.flatResults.length - 1;
     }
-    updateSelection();
-  }
-
-  function reindexItems() {
-    const items = state.shadowRoot.querySelectorAll(".qal-result-item");
-    for (let i = 0; i < items.length; i++) {
-      items[i].dataset.index = i;
-    }
-  }
-
-  function renderResults(results, query) {
-    const container = state.elements.results;
-    container.innerHTML = "";
-
-    const totalCount =
-      results.tabs.length + results.bookmarks.length + results.history.length;
-
-    if (totalCount === 0) {
-      renderNoResults(query);
-      return;
-    }
-
-    let globalIndex = 0;
-
-    for (const sectionKey of SECTION_KEYS) {
-      const items = results[sectionKey];
-      if (items.length === 0) continue;
-
-      const section = createElement("div", "qal-section");
-      section.dataset.section = sectionKey;
-
-      const header = createSectionHeader(sectionKey, items.length);
-      section.appendChild(header);
-
-      for (const item of items) {
-        const el = createResultItem(item, sectionKey, query, globalIndex);
-        section.appendChild(el);
-        globalIndex++;
-      }
-
-      container.appendChild(section);
-    }
-
-    updateSelection();
-  }
-
-  function createSectionHeader(sectionKey, count) {
-    const header = createElement("div", "qal-section-header");
-
-    const icon = createElement("span", "qal-section-icon");
-    icon.textContent = SECTION_ICONS[sectionKey];
-    const titleEl = createElement("span", "qal-section-title");
-    titleEl.textContent = t(`sections.${sectionKey}`);
-    const countEl = createElement("span", "qal-section-count");
-    countEl.textContent = count;
-
-    header.append(icon, titleEl, countEl);
-    return header;
-  }
-
-  function createResultItem(item, sectionKey, query, index) {
-    const el = createElement("div", "qal-result-item");
-    el.setAttribute("role", "option");
-    el.setAttribute("aria-selected", "false");
-    el.dataset.type = sectionKey;
-    el.dataset.id = item.id;
-    el.dataset.url = item.url || "";
-    el.dataset.index = index;
-
-    const favicon = createFavicon(item, sectionKey);
-    const textContainer = createResultText(item, query);
-
-    if (item.isContentMatch) {
-      const contentBadge = createElement("span", "qal-content-badge");
-      contentBadge.textContent = "\u2261";
-      contentBadge.title = t("badges.contentMatch");
-      el.append(favicon, contentBadge, textContainer);
-    } else if (sectionKey === "tabs" && item.isCurrentWindow === false) {
-      const badge = createElement("span", "qal-window-badge");
-      badge.textContent = "\u2197";
-      badge.title = t("badges.otherWindow");
-      el.append(favicon, badge, textContainer);
-    } else {
-      el.append(favicon, textContainer);
-    }
-
-    if (sectionKey === "tabs") {
-      const actions = createElement("div", "qal-result-actions");
-      const closeBtn = createElement("button", "qal-close-tab");
-      closeBtn.textContent = "\u2715";
-      closeBtn.title = t("badges.closeTab");
-      actions.appendChild(closeBtn);
-      el.appendChild(actions);
-    }
-
-    return el;
-  }
-
-  function createFavicon(item, sectionKey) {
-    const favicon = document.createElement("img");
-    favicon.className = "qal-favicon";
-    favicon.width = 16;
-    favicon.height = 16;
-
-    if (sectionKey === "tabs" && item.favIconUrl) {
-      favicon.src = item.favIconUrl;
-    } else if (item.url) {
-      try {
-        const hostname = new URL(item.url).hostname;
-        favicon.src = FAVICON_FALLBACK_BASE + hostname;
-      } catch {
-        favicon.src = "";
-      }
-    }
-
-    favicon.onerror = () => {
-      favicon.style.display = "none";
-    };
-
-    return favicon;
-  }
-
-  function createResultText(item, query) {
-    const container = createElement("div", "qal-result-text");
-    const titleEl = createElement("span", "qal-result-title");
-    titleEl.innerHTML = highlightMatch(item.title || "", query);
-    const url = createElement("span", "qal-result-url");
-    url.innerHTML = highlightMatch(formatUrl(item.url || ""), query);
-    container.append(titleEl, url);
-    return container;
-  }
-
-  function renderEmpty() {
-    state.elements.results.innerHTML = "";
-    const empty = createElement("div", "qal-empty-state");
-    empty.textContent = t("states.empty");
-    state.elements.results.appendChild(empty);
-  }
-
-  function renderNoResults(query) {
-    state.elements.results.innerHTML = "";
-    const empty = createElement("div", "qal-empty-state");
-    const safeQuery = escapeHtml(query);
-    empty.innerHTML = t("states.noResults", { query: safeQuery });
-    state.elements.results.appendChild(empty);
-  }
-
-  function renderLoading() {
-    state.elements.results.innerHTML = "";
-    const loading = createElement("div", "qal-loading");
-    loading.textContent = t("states.loading");
-    state.elements.results.appendChild(loading);
-  }
-
-  function renderError() {
-    state.elements.results.innerHTML = "";
-    const error = createElement("div", "qal-empty-state");
-    error.textContent = t("states.error");
-    state.elements.results.appendChild(error);
+    updateSelection(state.elements.results, state.selectedIndex);
   }
 
   async function loadConfig() {

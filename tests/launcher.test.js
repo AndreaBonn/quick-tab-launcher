@@ -27,6 +27,19 @@ const {
   applyTranslations,
 } = require("../src/i18n.js");
 
+const {
+  createElement,
+  createResultItem,
+  createSectionHeader,
+  renderResults,
+  renderEmpty,
+  renderNoResults,
+  renderLoading,
+  renderError,
+  updateSelection,
+  reindexItems,
+} = require("../src/render-utils.js");
+
 /**
  * Creates a minimal browser mock for content script testing.
  */
@@ -76,6 +89,16 @@ async function loadLauncher(browserMock) {
   globalThis.onLocaleChange = onLocaleChange;
   globalThis.applyTranslations = applyTranslations;
   globalThis.setLocaleFromStorage = setLocaleFromStorage;
+  globalThis.createElement = createElement;
+  globalThis.createResultItem = createResultItem;
+  globalThis.createSectionHeader = createSectionHeader;
+  globalThis.renderResults = renderResults;
+  globalThis.renderEmpty = renderEmpty;
+  globalThis.renderNoResults = renderNoResults;
+  globalThis.renderLoading = renderLoading;
+  globalThis.renderError = renderError;
+  globalThis.updateSelection = updateSelection;
+  globalThis.reindexItems = reindexItems;
 
   let capturedShadowRoot = null;
   const originalAttachShadow = HTMLElement.prototype.attachShadow;
