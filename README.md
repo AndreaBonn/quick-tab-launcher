@@ -172,6 +172,8 @@ GitHub Actions runs on every push and pull request to `main` (`.github/workflows
 
 The extension runs entirely client-side within Firefox's WebExtension sandbox. Input displayed in the overlay is escaped via `escapeHtml()` to prevent XSS. The UI is isolated from the host page through a closed Shadow DOM.
 
+The manifest declares the `<all_urls>` permission because the content script (the overlay UI) must be injectable on any page the user visits. This is the standard pattern for Spotlight-style extensions; without it, the launcher would only work on a pre-defined set of domains.
+
 To report a vulnerability, see [SECURITY.md](./SECURITY.md).
 
 ## License

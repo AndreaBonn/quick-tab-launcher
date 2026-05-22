@@ -172,6 +172,8 @@ GitHub Actions esegue su ogni push e pull request verso `main` (`.github/workflo
 
 L'estensione gira interamente lato client nella sandbox WebExtension di Firefox. L'input visualizzato nell'overlay viene sanitizzato tramite `escapeHtml()` per prevenire XSS. La UI e isolata dalla pagina host attraverso un Shadow DOM chiuso.
 
+Il manifest dichiara il permesso `<all_urls>` perche il content script (la UI overlay) deve poter essere iniettato su qualsiasi pagina visitata dall'utente. Questo e il pattern standard per estensioni di tipo Spotlight; senza di esso il launcher funzionerebbe solo su un insieme predefinito di domini.
+
 Per segnalare una vulnerabilita, consulta [SECURITY.it.md](./SECURITY.it.md).
 
 ## Licenza
