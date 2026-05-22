@@ -11,10 +11,16 @@ const I18N_MESSAGES = {
     "launcher.footer.navigate": "\u2191\u2193 naviga",
     "launcher.footer.open": "\u21B5 apri",
     "launcher.footer.newTab": "Ctrl+\u21B5 nuova scheda",
+    "launcher.footer.fulltext": "Alt+C contenuto",
     "launcher.footer.close": "ESC chiudi",
     "sections.tabs": "Schede aperte",
     "sections.bookmarks": "Segnalibri",
     "sections.history": "Cronologia",
+    "launcher.fulltextToggle": "Contenuto",
+    "launcher.fulltextToggle.tooltip.on":
+      "Ricerca nel contenuto attiva (Alt+C)",
+    "launcher.fulltextToggle.tooltip.off":
+      "Ricerca nel contenuto disattiva (Alt+C)",
     "badges.contentMatch": "Match nel contenuto",
     "badges.otherWindow": "Altra finestra",
     "badges.closeTab": "Chiudi scheda",
@@ -61,10 +67,14 @@ const I18N_MESSAGES = {
     "launcher.footer.navigate": "\u2191\u2193 navigate",
     "launcher.footer.open": "\u21B5 open",
     "launcher.footer.newTab": "Ctrl+\u21B5 new tab",
+    "launcher.footer.fulltext": "Alt+C content",
     "launcher.footer.close": "ESC close",
     "sections.tabs": "Open tabs",
     "sections.bookmarks": "Bookmarks",
     "sections.history": "History",
+    "launcher.fulltextToggle": "Content",
+    "launcher.fulltextToggle.tooltip.on": "Content search on (Alt+C)",
+    "launcher.fulltextToggle.tooltip.off": "Content search off (Alt+C)",
     "badges.contentMatch": "Content match",
     "badges.otherWindow": "Other window",
     "badges.closeTab": "Close tab",
@@ -109,7 +119,8 @@ let i18nCurrentLocale = I18N_DEFAULT_LOCALE;
 const i18nChangeListeners = [];
 
 function t(key, params) {
-  const dict = I18N_MESSAGES[i18nCurrentLocale] || I18N_MESSAGES[I18N_DEFAULT_LOCALE];
+  const dict =
+    I18N_MESSAGES[i18nCurrentLocale] || I18N_MESSAGES[I18N_DEFAULT_LOCALE];
   let message = dict[key];
   if (message === undefined) {
     return key;

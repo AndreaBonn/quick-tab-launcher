@@ -63,7 +63,12 @@
     const shortcutHint = createElement("span", "qal-shortcut-hint");
     shortcutHint.textContent = t("launcher.escHint");
 
-    searchContainer.append(searchIcon, input, shortcutHint);
+    const fulltextToggle = createElement("button", "qal-fulltext-toggle");
+    fulltextToggle.type = "button";
+    fulltextToggle.textContent = t("launcher.fulltextToggle");
+    updateFulltextToggleState(fulltextToggle);
+
+    searchContainer.append(searchIcon, input, fulltextToggle, shortcutHint);
 
     const results = createElement("div", "qal-results");
     const footer = createFooter();
@@ -79,6 +84,7 @@
       results,
       footer,
       shortcutHint,
+      fulltextToggle,
     };
   }
 
@@ -88,6 +94,7 @@
       "launcher.footer.navigate",
       "launcher.footer.open",
       "launcher.footer.newTab",
+      "launcher.footer.fulltext",
       "launcher.footer.close",
     ];
     for (const key of keys) {
@@ -102,6 +109,8 @@
   function applyOverlayTranslations() {
     state.elements.input.placeholder = t("launcher.placeholder");
     state.elements.shortcutHint.textContent = t("launcher.escHint");
+    state.elements.fulltextToggle.textContent = t("launcher.fulltextToggle");
+    updateFulltextToggleState(state.elements.fulltextToggle);
     const footerSpans = state.elements.footer.querySelectorAll("[data-i18n]");
     for (const span of footerSpans) {
       span.textContent = t(span.dataset.i18n);
@@ -114,11 +123,44 @@
     return el;
   }
 
+  function updateFulltextToggleState(btn) {
+    const isOn = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
+    btn.classList.toggle("qal-fulltext-active", isOn);
+    const tooltipKey = isOn
+      ? "launcher.fulltextToggle.tooltip.on"
+      : "launcher.fulltextToggle.tooltip.off";
+    btn.title = t(tooltipKey);
+    btn.setAttribute("aria-pressed", String(isOn));
+  }
+
+  async function toggleFulltextSearch() {
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = !QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
+    updateFulltextToggleState(state.elements.fulltextToggle);
+    try {
+      const stored = await loadUserConfig();
+      stored.ENABLE_FULLTEXT_SEARCH = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
+      await saveUserConfig(stored);
+    } catch {
+      // Storage non disponibile: toggle valido solo per sessione
+    }
+    retriggerSearch();
+  }
+
+  function retriggerSearch() {
+    const query = state.elements.input.value;
+    if (!query.trim()) return;
+    handleInput();
+  }
+
   function setupListeners() {
     state.elements.backdrop.addEventListener("click", closeLauncher);
     state.elements.input.addEventListener("input", handleInput);
     state.elements.input.addEventListener("keydown", handleKeydown);
     state.elements.results.addEventListener("click", handleResultClick);
+    state.elements.fulltextToggle.addEventListener(
+      "click",
+      toggleFulltextSearch,
+    );
 
     browser.runtime.onMessage.addListener((message) => {
       if (message.action === "toggle") toggleLauncher();
@@ -144,6 +186,7 @@
     state.elements.input.value = "";
     state.selectedIndex = -1;
     state.flatResults = [];
+    updateFulltextToggleState(state.elements.fulltextToggle);
     renderEmpty();
 
     requestAnimationFrame(() => {
@@ -196,6 +239,12 @@
   }
 
   function handleKeydown(e) {
+    if (e.altKey && (e.key === "c" || e.key === "C")) {
+      e.preventDefault();
+      toggleFulltextSearch();
+      return;
+    }
+
     switch (e.key) {
       case "ArrowDown":
       case "Tab":

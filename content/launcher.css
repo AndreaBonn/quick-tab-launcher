@@ -118,6 +118,39 @@
   color: var(--qal-text-secondary);
 }
 
+.qal-fulltext-toggle {
+  font-size: 11px;
+  color: var(--qal-text-secondary);
+  background: transparent;
+  border: 1px solid var(--qal-border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--qal-font);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  line-height: 1.2;
+}
+
+.qal-fulltext-toggle:hover {
+  background: var(--qal-hover);
+  color: var(--qal-text-primary);
+}
+
+.qal-fulltext-toggle.qal-fulltext-active {
+  background: var(--qal-accent);
+  color: #ffffff;
+  border-color: var(--qal-accent);
+}
+
+.qal-fulltext-toggle.qal-fulltext-active:hover {
+  opacity: 0.85;
+}
+
 .qal-shortcut-hint {
   font-size: 11px;
   color: var(--qal-text-secondary);
