@@ -5,7 +5,12 @@
 A Firefox extension that adds a Spotlight-style command palette for searching open tabs, bookmarks, and browsing history from a single keyboard shortcut.
 
 [![Install from AMO](https://img.shields.io/badge/Firefox_Add--ons-Install-ff7139?logo=firefoxbrowser)](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/)
-![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
+[![CI](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml/badge.svg)](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/quick-tab-launcher/main/badges/test-badge.json)](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/quick-tab-launcher/main/badges/coverage-badge.json)](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![ESLint](https://img.shields.io/badge/linter-ESLint-4B32C3?logo=eslint)](https://eslint.org/)
+[![Security Policy](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md)
 ![JavaScript](https://img.shields.io/badge/javascript-ES2020+-f7df1e)
 ![Firefox](https://img.shields.io/badge/firefox-%3E%3D91-ff7139)
 ![Manifest](https://img.shields.io/badge/manifest-v2-lightgrey)

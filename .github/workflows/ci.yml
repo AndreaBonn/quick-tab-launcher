@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -25,8 +28,62 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test
-        run: npm test
-
-      - name: Test coverage
+      - name: Test with coverage
         run: npm run test:coverage
+
+      - name: Generate test badge
+        if: always()
+        run: |
+          node -e "
+          const fs = require('fs');
+          const { DOMParser } = require('jsdom');
+          const xml = fs.readFileSync('test-results.xml', 'utf8');
+          const doc = new DOMParser().parseFromString(xml, 'text/xml');
+          const suites = doc.documentElement.tagName === 'testsuites'
+            ? Array.from(doc.querySelectorAll('testsuite'))
+            : [doc.documentElement];
+          let tests = 0, failures = 0, errors = 0;
+          for (const s of suites) {
+            tests += parseInt(s.getAttribute('tests') || '0');
+            failures += parseInt(s.getAttribute('failures') || '0');
+            errors += parseInt(s.getAttribute('errors') || '0');
+          }
+          const passed = tests - failures - errors;
+          const failed = failures + errors;
+          const badge = {
+            schemaVersion: 1,
+            label: 'tests',
+            message: failed > 0 ? passed + '/' + tests + ' passed' : passed + ' passed',
+            color: failed > 0 ? 'red' : 'brightgreen'
+          };
+          fs.mkdirSync('badges', { recursive: true });
+          fs.writeFileSync('badges/test-badge.json', JSON.stringify(badge));
+          "
+
+      - name: Generate coverage badge
+        if: always()
+        run: |
+          node -e "
+          const fs = require('fs');
+          const summaryPath = 'coverage/coverage-summary.json';
+          let badge;
+          if (!fs.existsSync(summaryPath)) {
+            badge = { schemaVersion: 1, label: 'coverage', message: 'N/A', color: 'lightgrey' };
+          } else {
+            const data = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+            const pct = data.total.lines.pct;
+            const color = pct >= 90 ? 'brightgreen' : pct >= 80 ? 'green' : pct >= 60 ? 'yellow' : 'red';
+            badge = { schemaVersion: 1, label: 'coverage', message: pct + '%', color };
+          }
+          fs.mkdirSync('badges', { recursive: true });
+          fs.writeFileSync('badges/coverage-badge.json', JSON.stringify(badge));
+          "
+
+      - name: Commit badges
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add badges/test-badge.json badges/coverage-badge.json
+          git diff --cached --quiet || git commit -m "ci: update badges [skip ci]"
+          git push

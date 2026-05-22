@@ -1,5 +1,6 @@
 node_modules/
 coverage/
+test-results.xml
 .env
 *.log
 *.zip
@@ -10,3 +11,4 @@ doc_progetto/
 docs/REPORT_ATTIVITA.md
 .playwright-mcp/
 docs/amo-submission/screenshots/mockup-*.html
+CLAUDE.md
