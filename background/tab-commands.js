@@ -106,7 +106,11 @@ async function sortTabsByTitle() {
 }
 
 async function closeDomainTabs(domain) {
-  const tabs = await browser.tabs.query({});
+  const [tabs, [activeTab]] = await Promise.all([
+    browser.tabs.query({}),
+    browser.tabs.query({ active: true, currentWindow: true }),
+  ]);
+  const activeTabId = activeTab?.id;
   const toClose = tabs
     .filter((tab) => {
       try {
@@ -115,7 +119,7 @@ async function closeDomainTabs(domain) {
         return false;
       }
     })
-    .filter((tab) => !tab.active)
+    .filter((tab) => tab.id !== activeTabId)
     .map((tab) => tab.id);
   if (toClose.length > 0) await browser.tabs.remove(toClose);
   return { closed: toClose.length };
