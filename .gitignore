@@ -8,3 +8,5 @@ coverage/
 Thumbs.db
 doc_progetto/
 docs/REPORT_ATTIVITA.md
+.playwright-mcp/
+docs/amo-submission/screenshots/mockup-*.html
