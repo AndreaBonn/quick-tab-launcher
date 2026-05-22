@@ -63,7 +63,7 @@ function createFavicon(item, sectionKey) {
       sectionKey === "recent-closed") &&
     item.favIconUrl;
 
-  if (hasFavIcon) {
+  if (hasFavIcon && /^https?:/.test(item.favIconUrl)) {
     const img = document.createElement("img");
     img.className = "qal-favicon";
     img.width = 16;
