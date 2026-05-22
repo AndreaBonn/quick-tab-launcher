@@ -330,6 +330,23 @@
   gap: 4px;
 }
 
+.qal-branding {
+  text-align: center;
+  padding: 4px 16px 6px;
+  font-size: 10px;
+  color: var(--qal-text-secondary);
+  opacity: 0.6;
+}
+
+.qal-branding a {
+  color: var(--qal-accent);
+  text-decoration: none;
+}
+
+.qal-branding a:hover {
+  text-decoration: underline;
+}
+
 /* --- Command palette --- */
 
 .qal-command-item {

@@ -67,7 +67,8 @@
     results.setAttribute("role", "listbox");
     const footer = createFooter();
 
-    panel.append(searchContainer, results, footer);
+    const branding = createBranding();
+    panel.append(searchContainer, results, footer, branding);
     overlay.append(backdrop, panel);
     state.shadowRoot.appendChild(overlay);
 
@@ -100,6 +101,19 @@
       footer.appendChild(span);
     }
     return footer;
+  }
+
+  function createBranding() {
+    const div = createElement("div", "qal-branding");
+    div.textContent = "Quick Tab Launcher by ";
+    const link = document.createElement("a");
+    link.href = "https://github.com/AndreaBonn";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Bonn";
+    link.addEventListener("click", (e) => e.stopPropagation());
+    div.appendChild(link);
+    return div;
   }
 
   function applyOverlayTranslations() {
