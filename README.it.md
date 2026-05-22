@@ -4,7 +4,7 @@
 
 Estensione Firefox che aggiunge una palette comandi in stile Spotlight per cercare schede aperte, segnalibri e cronologia con una scorciatoia da tastiera.
 
-[![Installa da AMO](https://img.shields.io/badge/Firefox_Add--ons-Installa-ff7139?logo=firefoxbrowser)](https://addons.mozilla.org/it/firefox/addon/quick-tab-launcher/)
+[![Installa da AMO](https://img.shields.io/badge/Firefox_Add--ons-Installa-ff7139?logo=firefoxbrowser)](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/)
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![JavaScript](https://img.shields.io/badge/javascript-ES2020+-f7df1e)
 ![Firefox](https://img.shields.io/badge/firefox-%3E%3D91-ff7139)
@@ -101,7 +101,7 @@ quick-tab-launcher__firefox/
 
 ### Da Firefox Add-ons (consigliato)
 
-Installa direttamente dallo [store Firefox Add-ons](https://addons.mozilla.org/it/firefox/addon/quick-tab-launcher/).
+Installa direttamente dallo [store Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/).
 
 ### Da sorgente (sviluppo)
 
