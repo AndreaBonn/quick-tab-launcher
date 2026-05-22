@@ -16,6 +16,9 @@ function createBrowserMock() {
     commands: {
       onCommand: { addListener: vi.fn() },
     },
+    browserAction: {
+      onClicked: { addListener: vi.fn() },
+    },
     runtime: {
       onMessage: { addListener: vi.fn() },
     },
@@ -57,8 +60,10 @@ function loadBackground(browserMock) {
     browserMock.commands.onCommand.addListener.mock.calls[0][0];
   const messageListener =
     browserMock.runtime.onMessage.addListener.mock.calls[0][0];
+  const browserActionListener =
+    browserMock.browserAction.onClicked.addListener.mock.calls[0][0];
 
-  return { commandListener, messageListener };
+  return { commandListener, messageListener, browserActionListener };
 }
 
 describe("background.js - command listener", () => {
@@ -93,10 +98,44 @@ describe("background.js - command listener", () => {
   it("handles sendMessage failure gracefully on unsupported pages", async () => {
     browserMock.tabs.query.mockResolvedValue([{ id: 10 }]);
     browserMock.tabs.sendMessage.mockRejectedValue(
-      new Error("Could not establish connection")
+      new Error("Could not establish connection"),
     );
 
     await expect(commandListener("toggle-launcher")).resolves.toBeUndefined();
+  });
+});
+
+describe("background.js - browserAction click", () => {
+  let browserMock;
+  let browserActionListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ browserActionListener } = loadBackground(browserMock));
+  });
+
+  it("sends toggle message to active tab on icon click", async () => {
+    const activeTab = { id: 7 };
+    browserMock.tabs.query.mockResolvedValue([activeTab]);
+
+    await browserActionListener();
+
+    expect(browserMock.tabs.query).toHaveBeenCalledWith({
+      active: true,
+      currentWindow: true,
+    });
+    expect(browserMock.tabs.sendMessage).toHaveBeenCalledWith(7, {
+      action: "toggle",
+    });
+  });
+
+  it("handles click failure gracefully on unsupported pages", async () => {
+    browserMock.tabs.query.mockResolvedValue([{ id: 5 }]);
+    browserMock.tabs.sendMessage.mockRejectedValue(
+      new Error("Could not establish connection"),
+    );
+
+    await expect(browserActionListener()).resolves.toBeUndefined();
   });
 });
 
@@ -114,7 +153,7 @@ describe("background.js - search handler", () => {
     const result = messageListener(
       { action: "search", query: "test" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
     expect(result).toBe(true);
   });
@@ -140,7 +179,7 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "test" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
@@ -159,7 +198,7 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "github" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
@@ -180,12 +219,12 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "match" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
     expect(sendResponse.mock.calls[0][0].tabs).toHaveLength(
-      QAL_CONFIG.MAX_TAB_RESULTS
+      QAL_CONFIG.MAX_TAB_RESULTS,
     );
   });
 
@@ -196,7 +235,7 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "a" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
@@ -215,7 +254,7 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "bo" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
@@ -241,7 +280,7 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "hist" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
@@ -257,7 +296,7 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "   " },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
@@ -276,7 +315,7 @@ describe("background.js - search handler", () => {
     messageListener(
       { action: "search", query: "example" },
       { tab: { id: 1 } },
-      sendResponse
+      sendResponse,
     );
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
@@ -297,7 +336,7 @@ describe("background.js - navigate handler", () => {
     messageListener(
       { action: "navigate", type: "tab", tabId: 42 },
       { tab: { id: 10 } },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(browserMock.tabs.update).toHaveBeenCalledWith(42, { active: true });
@@ -312,14 +351,14 @@ describe("background.js - navigate handler", () => {
         openInCurrent: false,
       },
       { tab: { id: 10 } },
-      vi.fn()
+      vi.fn(),
     );
 
     await vi.waitFor(() =>
       expect(browserMock.tabs.create).toHaveBeenCalledWith({
         url: "https://bm.com",
         active: true,
-      })
+      }),
     );
   });
 
@@ -332,14 +371,14 @@ describe("background.js - navigate handler", () => {
         openInCurrent: false,
       },
       { tab: { id: 10 } },
-      vi.fn()
+      vi.fn(),
     );
 
     await vi.waitFor(() =>
       expect(browserMock.tabs.create).toHaveBeenCalledWith({
         url: "https://hist.com",
         active: true,
-      })
+      }),
     );
   });
 
@@ -347,7 +386,7 @@ describe("background.js - navigate handler", () => {
     const result = messageListener(
       { action: "navigate", type: "tab", tabId: 42 },
       { tab: { id: 10 } },
-      vi.fn()
+      vi.fn(),
     );
     expect(result).toBe(false);
   });
@@ -366,7 +405,7 @@ describe("background.js - close-tab handler", () => {
     messageListener(
       { action: "close-tab", tabId: 99 },
       { tab: { id: 10 } },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(browserMock.tabs.remove).toHaveBeenCalledWith(99);
@@ -376,7 +415,7 @@ describe("background.js - close-tab handler", () => {
     const result = messageListener(
       { action: "close-tab", tabId: 99 },
       { tab: { id: 10 } },
-      vi.fn()
+      vi.fn(),
     );
     expect(result).toBe(false);
   });

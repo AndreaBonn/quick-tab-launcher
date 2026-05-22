@@ -9,13 +9,14 @@
     "48": "icons/icon-48.svg",
     "96": "icons/icon-96.svg"
   },
-  "permissions": [
-    "tabs",
-    "bookmarks",
-    "history",
-    "activeTab",
-    "storage"
-  ],
+  "browser_action": {
+    "default_icon": {
+      "16": "icons/icon-16.svg",
+      "32": "icons/icon-32.svg"
+    },
+    "default_title": "Quick Actions Launcher"
+  },
+  "permissions": ["tabs", "bookmarks", "history", "activeTab", "storage"],
   "background": {
     "scripts": ["src/search-utils.js", "background/background.js"],
     "persistent": false

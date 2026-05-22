@@ -1,8 +1,6 @@
 /* global browser, QAL_CONFIG */
 
-browser.commands.onCommand.addListener(async (command) => {
-  if (command !== "toggle-launcher") return;
-
+async function toggleLauncher() {
   try {
     const [activeTab] = await browser.tabs.query({
       active: true,
@@ -13,6 +11,15 @@ browser.commands.onCommand.addListener(async (command) => {
   } catch (err) {
     console.log("Quick Actions Launcher: pagina non supportata", err.message);
   }
+}
+
+browser.commands.onCommand.addListener(async (command) => {
+  if (command !== "toggle-launcher") return;
+  await toggleLauncher();
+});
+
+browser.browserAction.onClicked.addListener(async () => {
+  await toggleLauncher();
 });
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -53,7 +60,7 @@ async function searchTabs(query) {
     .filter(
       (tab) =>
         tab.title?.toLowerCase().includes(query) ||
-        tab.url?.toLowerCase().includes(query)
+        tab.url?.toLowerCase().includes(query),
     )
     .slice(0, QAL_CONFIG.MAX_TAB_RESULTS)
     .map((tab) => ({
