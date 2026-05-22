@@ -198,8 +198,11 @@ function reindexItems(container) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     createElement,
+    createFavicon,
+    createInitialFavicon,
     createResultItem,
     createSectionHeader,
+    hashCode,
     renderResults,
     renderEmpty,
     renderNoResults,
