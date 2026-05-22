@@ -141,8 +141,9 @@ function formatTabResult(tab, currentWindowId, isContentMatch) {
 
 async function extractTabContent(tabId) {
   try {
-    const code = `document.body.innerText.substring(0, ${QAL_CONFIG.FULLTEXT_MAX_LENGTH})`;
-    const results = await browser.tabs.executeScript(tabId, { code });
+    const results = await browser.tabs.executeScript(tabId, {
+      file: "content/extract-content.js",
+    });
     const raw = results[0] ? String(results[0]) : "";
     return raw.substring(0, QAL_CONFIG.FULLTEXT_MAX_LENGTH).toLowerCase();
   } catch {
