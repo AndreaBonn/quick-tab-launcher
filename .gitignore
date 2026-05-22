@@ -6,6 +6,7 @@ test-results.xml
 *.zip
 *.xpi
 web-ext-artifacts/
+.amo-upload-uuid
 .DS_Store
 Thumbs.db
 doc_progetto/

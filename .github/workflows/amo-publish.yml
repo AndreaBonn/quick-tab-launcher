@@ -47,10 +47,10 @@ jobs:
           fi
 
       - name: Build extension
-        run: npx web-ext build --config=web-ext-config.js --overwrite-dest
+        run: npx web-ext build --config=web-ext-config.cjs --overwrite-dest
 
       - name: Sign and publish to AMO
-        run: npx web-ext sign --config=web-ext-config.js --channel=listed
+        run: npx web-ext sign --config=web-ext-config.cjs --channel=listed
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
