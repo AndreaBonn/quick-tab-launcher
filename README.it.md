@@ -106,14 +106,14 @@ Pacchettizza l'estensione in un file `.xpi` e installala tramite i componenti ag
 
 ## Utilizzo
 
-| Azione | Scorciatoia / Input |
-|---|---|
-| Apri/chiudi il launcher | `Ctrl+Shift+Space` o icona toolbar |
-| Naviga i risultati | `Freccia Su` / `Freccia Giu` / `Tab` |
-| Apri il risultato selezionato | `Enter` |
-| Apri in nuova scheda | `Ctrl+Enter` |
+| Azione                          | Scorciatoia / Input                    |
+| ------------------------------- | -------------------------------------- |
+| Apri/chiudi il launcher         | `Ctrl+Shift+Space` o icona toolbar     |
+| Naviga i risultati              | `Freccia Su` / `Freccia Giu` / `Tab`   |
+| Apri il risultato selezionato   | `Enter`                                |
+| Apri in nuova scheda            | `Ctrl+Enter`                           |
 | Chiudi una scheda dai risultati | Clicca il pulsante X sui risultati tab |
-| Chiudi il launcher | `Escape` o clicca sullo sfondo |
+| Chiudi il launcher              | `Escape` o clicca sullo sfondo         |
 
 La ricerca in segnalibri e cronologia si attiva dopo 2+ caratteri. I risultati sono limitati a 5 per categoria e deduplicati tra le fonti (le schede hanno priorita sui segnalibri, i segnalibri sulla cronologia).
 
@@ -123,21 +123,23 @@ La ricerca schede copre tutte le finestre aperte. Le schede provenienti da altre
 
 Clicca col tasto destro sull'icona dell'estensione e seleziona "Opzioni" (oppure vai su `about:addons` e clicca sulle preferenze dell'estensione). Impostazioni disponibili:
 
-| Impostazione | Default | Descrizione |
-|---|---|---|
-| Max risultati schede | 5 | Numero massimo di schede aperte mostrate |
-| Max risultati segnalibri | 5 | Numero massimo di segnalibri mostrati |
-| Max risultati cronologia | 5 | Numero massimo di voci cronologia mostrate |
-| Ritardo ricerca (ms) | 80 | Attesa prima di avviare la ricerca durante la digitazione |
-| Giorni cronologia | 30 | Quanti giorni di cronologia includere nella ricerca |
-| Lunghezza minima query | 2 | Caratteri minimi per cercare in segnalibri e cronologia |
-| Soglia caricamento (ms) | 300 | Attesa prima di mostrare l'indicatore di caricamento |
+| Impostazione             | Default | Descrizione                                                      |
+| ------------------------ | ------- | ---------------------------------------------------------------- |
+| Max risultati schede     | 5       | Numero massimo di schede aperte mostrate                         |
+| Max risultati segnalibri | 5       | Numero massimo di segnalibri mostrati                            |
+| Max risultati cronologia | 5       | Numero massimo di voci cronologia mostrate                       |
+| Ritardo ricerca (ms)     | 80      | Attesa prima di avviare la ricerca durante la digitazione        |
+| Giorni cronologia        | 30      | Quanti giorni di cronologia includere nella ricerca              |
+| Lunghezza minima query   | 2       | Caratteri minimi per cercare in segnalibri e cronologia          |
+| Soglia caricamento (ms)  | 300     | Attesa prima di mostrare l'indicatore di caricamento             |
+| Ricerca nel contenuto    | off     | Cerca nel testo delle pagine aperte (piu lento con molte schede) |
 
 Le impostazioni sono salvate in `browser.storage.local` e applicate in tempo reale senza ricaricare l'estensione.
 
+Quando la ricerca nel contenuto e attiva, le schede il cui testo corrisponde alla query vengono incluse nei risultati con un badge contenuto. I match per titolo/URL appaiono sempre prima. L'estrazione del contenuto viene saltata per le pagine privilegiate dove l'iniezione di script non e consentita.
+
 ## Limitazioni note
 
-- Nessuna ricerca full-text nel contenuto delle pagine (solo titolo e URL)
 - Non funziona su pagine `about:`, `moz-extension:`, `file:` (restrizione WebExtension Firefox)
 
 ## Testing

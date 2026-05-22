@@ -70,24 +70,79 @@ async function handleSearch(query, senderWindowId) {
   return deduplicateResults(tabs, bookmarks, history);
 }
 
+function filterTabsByTitleUrl(tabs, query) {
+  return tabs.filter(
+    (tab) =>
+      tab.title?.toLowerCase().includes(query) ||
+      tab.url?.toLowerCase().includes(query),
+  );
+}
+
+function formatTabResult(tab, currentWindowId, isContentMatch) {
+  return {
+    id: tab.id,
+    title: tab.title || extractDomain(tab.url),
+    url: tab.url,
+    favIconUrl: tab.favIconUrl || null,
+    active: tab.active,
+    windowId: tab.windowId,
+    isCurrentWindow: tab.windowId === currentWindowId,
+    ...(isContentMatch ? { isContentMatch: true } : {}),
+  };
+}
+
+async function extractTabContent(tabId) {
+  try {
+    const code = `document.body.innerText.substring(0, ${QAL_CONFIG.FULLTEXT_MAX_LENGTH})`;
+    const results = await browser.tabs.executeScript(tabId, { code });
+    const raw = results[0] ? String(results[0]) : "";
+    return raw.substring(0, QAL_CONFIG.FULLTEXT_MAX_LENGTH).toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+async function fetchTabsContent(tabs) {
+  const entries = await Promise.all(
+    tabs.map(async (tab) => [tab.id, await extractTabContent(tab.id)]),
+  );
+  return new Map(entries);
+}
+
 async function searchTabs(query, currentWindowId) {
   const allTabs = await browser.tabs.query({});
-  return allTabs
-    .filter(
-      (tab) =>
-        tab.title?.toLowerCase().includes(query) ||
-        tab.url?.toLowerCase().includes(query),
-    )
+  const titleUrlMatches = filterTabsByTitleUrl(allTabs, query);
+  const titleUrlMatchIds = new Set(titleUrlMatches.map((t) => t.id));
+
+  const primaryResults = titleUrlMatches
     .slice(0, QAL_CONFIG.MAX_TAB_RESULTS)
-    .map((tab) => ({
-      id: tab.id,
-      title: tab.title || extractDomain(tab.url),
-      url: tab.url,
-      favIconUrl: tab.favIconUrl || null,
-      active: tab.active,
-      windowId: tab.windowId,
-      isCurrentWindow: tab.windowId === currentWindowId,
-    }));
+    .map((tab) => formatTabResult(tab, currentWindowId, false));
+
+  if (!QAL_CONFIG.ENABLE_FULLTEXT_SEARCH) {
+    return primaryResults;
+  }
+
+  const remaining =
+    primaryResults.length < QAL_CONFIG.MAX_TAB_RESULTS
+      ? allTabs.filter((t) => !titleUrlMatchIds.has(t.id))
+      : [];
+
+  if (remaining.length === 0) {
+    return primaryResults;
+  }
+
+  const contentMap = await fetchTabsContent(remaining);
+  const contentMatches = remaining
+    .filter((tab) => {
+      const content = contentMap.get(tab.id) || "";
+      return content.includes(query);
+    })
+    .map((tab) => formatTabResult(tab, currentWindowId, true));
+
+  return [...primaryResults, ...contentMatches].slice(
+    0,
+    QAL_CONFIG.MAX_TAB_RESULTS,
+  );
 }
 
 async function searchBookmarks(query) {
@@ -159,4 +214,8 @@ function extractDomain(url) {
   } catch {
     return url;
   }
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { extractTabContent };
 }

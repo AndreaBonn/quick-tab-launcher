@@ -488,6 +488,71 @@ describe("launcher.js - window badge", () => {
   });
 });
 
+describe("launcher.js - content match badge", () => {
+  let browserMock;
+  let shadowRoot;
+  let messageListener;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    browserMock = createBrowserMock();
+    ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("shows content badge for tab with isContentMatch true", async () => {
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [
+        {
+          id: 1,
+          title: "Some Page",
+          url: "https://example.com",
+          favIconUrl: null,
+          isCurrentWindow: true,
+          isContentMatch: true,
+        },
+      ],
+      bookmarks: [],
+      history: [],
+    });
+
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "content");
+
+    const badge = shadowRoot.querySelector(".qal-content-badge");
+    expect(badge).toBeTruthy();
+  });
+
+  it("does NOT show content badge for tab without isContentMatch", async () => {
+    browserMock.runtime.sendMessage.mockResolvedValue({
+      tabs: [
+        {
+          id: 1,
+          title: "Normal Tab",
+          url: "https://example.com",
+          favIconUrl: null,
+          isCurrentWindow: true,
+        },
+      ],
+      bookmarks: [],
+      history: [],
+    });
+
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "normal");
+
+    const badge = shadowRoot.querySelector(".qal-content-badge");
+    expect(badge).toBeNull();
+  });
+});
+
 describe("launcher.js - backdrop close", () => {
   let browserMock;
   let shadowRoot;

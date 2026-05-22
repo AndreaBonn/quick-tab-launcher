@@ -216,6 +216,15 @@
   line-height: 1;
 }
 
+.qal-content-badge {
+  font-size: 13px;
+  color: var(--qal-text-secondary);
+  flex-shrink: 0;
+  opacity: 0.6;
+  border-radius: 3px;
+  line-height: 1;
+}
+
 .qal-result-actions {
   flex-shrink: 0;
   display: flex;

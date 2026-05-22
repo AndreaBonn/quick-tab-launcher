@@ -11,6 +11,8 @@ const QAL_CONFIG = {
   HISTORY_DAYS: 30,
   MIN_QUERY_LENGTH_EXTENDED: 2,
   LOADING_THRESHOLD_MS: 300,
+  ENABLE_FULLTEXT_SEARCH: false,
+  FULLTEXT_MAX_LENGTH: 10000,
 };
 
 function escapeHtml(text) {
@@ -52,11 +54,11 @@ function deduplicateResults(tabs, bookmarks, history) {
   const tabUrls = new Set(tabs.map((tab) => normalizeUrl(tab.url)));
 
   const dedupedBookmarks = bookmarks.filter(
-    (bm) => !tabUrls.has(normalizeUrl(bm.url))
+    (bm) => !tabUrls.has(normalizeUrl(bm.url)),
   );
 
   const bookmarkUrls = new Set(
-    dedupedBookmarks.map((bm) => normalizeUrl(bm.url))
+    dedupedBookmarks.map((bm) => normalizeUrl(bm.url)),
   );
   const dedupedHistory = history.filter((h) => {
     const normalized = normalizeUrl(h.url);
@@ -76,7 +78,7 @@ function normalizeUrl(url) {
     const parsed = new URL(url);
     return `${parsed.protocol}//${parsed.host}${parsed.pathname}`.replace(
       /\/$/,
-      ""
+      "",
     );
   } catch {
     return url.replace(/\/$/, "");

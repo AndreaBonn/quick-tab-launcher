@@ -141,6 +141,28 @@ body {
   opacity: 1;
 }
 
+.qal-options-label--checkbox {
+  flex-direction: row;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.qal-options-checkbox {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  margin-right: 8px;
+  accent-color: var(--qal-accent);
+  cursor: pointer;
+}
+
+.qal-options-label--checkbox .qal-options-hint {
+  flex-basis: 100%;
+  padding-left: 24px;
+}
+
 .qal-options-feedback {
   min-height: 20px;
   font-size: 13px;
@@ -168,7 +190,9 @@ body {
   font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .qal-options-btn:focus {

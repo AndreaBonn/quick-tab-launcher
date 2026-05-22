@@ -101,10 +101,10 @@ describe("options page - form population", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(document.getElementById("qal-max-tab-results").value).toBe(
-      String(QAL_CONFIG_DEFAULTS.MAX_TAB_RESULTS)
+      String(QAL_CONFIG_DEFAULTS.MAX_TAB_RESULTS),
     );
     expect(document.getElementById("qal-debounce-ms").value).toBe(
-      String(QAL_CONFIG_DEFAULTS.DEBOUNCE_MS)
+      String(QAL_CONFIG_DEFAULTS.DEBOUNCE_MS),
     );
   });
 });
@@ -141,7 +141,7 @@ describe("options page - save", () => {
           MAX_TAB_RESULTS: 9,
           DEBOUNCE_MS: 100,
         }),
-      })
+      }),
     );
   });
 
@@ -170,6 +170,140 @@ describe("options page - save", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Test: checkbox fields (ENABLE_FULLTEXT_SEARCH)
+// ---------------------------------------------------------------------------
+
+describe("options page - checkbox fields", () => {
+  it("populates checkbox as checked when config is true", async () => {
+    const stored = {
+      MAX_TAB_RESULTS: 5,
+      MAX_BOOKMARK_RESULTS: 5,
+      MAX_HISTORY_RESULTS: 5,
+      DEBOUNCE_MS: 80,
+      HISTORY_DAYS: 30,
+      MIN_QUERY_LENGTH_EXTENDED: 2,
+      LOADING_THRESHOLD_MS: 300,
+      ENABLE_FULLTEXT_SEARCH: true,
+    };
+    const mock = createBrowserMock(stored);
+
+    document.body.innerHTML = `
+      <form id="qal-options-form">
+        <input id="qal-max-tab-results" type="number" />
+        <input id="qal-max-bookmark-results" type="number" />
+        <input id="qal-max-history-results" type="number" />
+        <input id="qal-debounce-ms" type="number" />
+        <input id="qal-history-days" type="number" />
+        <input id="qal-min-query-length" type="number" />
+        <input id="qal-loading-threshold-ms" type="number" />
+        <input id="qal-enable-fulltext-search" type="checkbox" />
+        <button type="submit" id="qal-save-btn">Salva</button>
+        <button type="button" id="qal-reset-btn">Ripristina</button>
+        <p id="qal-feedback" class="qal-options-feedback"></p>
+      </form>
+    `;
+
+    globalThis.browser = mock;
+    globalThis.QAL_CONFIG_DEFAULTS = QAL_CONFIG_DEFAULTS;
+    globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
+    globalThis.mergeWithDefaults = mergeWithDefaults;
+
+    delete require.cache[require.resolve("../options/options.js")];
+    require("../options/options.js");
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    const checkbox = document.getElementById("qal-enable-fulltext-search");
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it("populates checkbox as unchecked when config is false (default)", async () => {
+    const mock = createBrowserMock({});
+    mock.storage.local.get = vi.fn().mockResolvedValue({});
+
+    document.body.innerHTML = `
+      <form id="qal-options-form">
+        <input id="qal-max-tab-results" type="number" />
+        <input id="qal-max-bookmark-results" type="number" />
+        <input id="qal-max-history-results" type="number" />
+        <input id="qal-debounce-ms" type="number" />
+        <input id="qal-history-days" type="number" />
+        <input id="qal-min-query-length" type="number" />
+        <input id="qal-loading-threshold-ms" type="number" />
+        <input id="qal-enable-fulltext-search" type="checkbox" />
+        <button type="submit" id="qal-save-btn">Salva</button>
+        <button type="button" id="qal-reset-btn">Ripristina</button>
+        <p id="qal-feedback" class="qal-options-feedback"></p>
+      </form>
+    `;
+
+    globalThis.browser = mock;
+    globalThis.QAL_CONFIG_DEFAULTS = QAL_CONFIG_DEFAULTS;
+    globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
+    globalThis.mergeWithDefaults = mergeWithDefaults;
+
+    delete require.cache[require.resolve("../options/options.js")];
+    require("../options/options.js");
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    const checkbox = document.getElementById("qal-enable-fulltext-search");
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it("readFormValues reads checkbox as boolean", async () => {
+    const mock = createBrowserMock({});
+    mock.storage.local.get = vi.fn().mockResolvedValue({});
+
+    document.body.innerHTML = `
+      <form id="qal-options-form">
+        <input id="qal-max-tab-results" type="number" value="5" />
+        <input id="qal-max-bookmark-results" type="number" value="5" />
+        <input id="qal-max-history-results" type="number" value="5" />
+        <input id="qal-debounce-ms" type="number" value="80" />
+        <input id="qal-history-days" type="number" value="30" />
+        <input id="qal-min-query-length" type="number" value="2" />
+        <input id="qal-loading-threshold-ms" type="number" value="300" />
+        <input id="qal-enable-fulltext-search" type="checkbox" />
+        <button type="submit" id="qal-save-btn">Salva</button>
+        <button type="button" id="qal-reset-btn">Ripristina</button>
+        <p id="qal-feedback" class="qal-options-feedback"></p>
+      </form>
+    `;
+
+    globalThis.browser = mock;
+    globalThis.QAL_CONFIG_DEFAULTS = QAL_CONFIG_DEFAULTS;
+    globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
+    globalThis.mergeWithDefaults = mergeWithDefaults;
+
+    delete require.cache[require.resolve("../options/options.js")];
+    require("../options/options.js");
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Check the checkbox and submit
+    const checkbox = document.getElementById("qal-enable-fulltext-search");
+    checkbox.checked = true;
+
+    document
+      .getElementById("qal-options-form")
+      .dispatchEvent(new Event("submit", { cancelable: true }));
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mock.storage.local.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        [CONFIG_STORAGE_KEY]: expect.objectContaining({
+          ENABLE_FULLTEXT_SEARCH: true,
+        }),
+      }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Test: reset
 // ---------------------------------------------------------------------------
 
@@ -184,7 +318,7 @@ describe("options page - reset", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(document.getElementById("qal-max-tab-results").value).toBe(
-      String(QAL_CONFIG_DEFAULTS.MAX_TAB_RESULTS)
+      String(QAL_CONFIG_DEFAULTS.MAX_TAB_RESULTS),
     );
   });
 });

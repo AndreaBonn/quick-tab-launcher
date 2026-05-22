@@ -123,21 +123,23 @@ Tab search spans all open windows. Tabs from other windows display a badge to di
 
 Right-click the extension icon and select "Options" (or go to `about:addons` and click the extension's preferences). Available settings:
 
-| Setting                | Default | Description                                    |
-| ---------------------- | ------- | ---------------------------------------------- |
-| Max tab results        | 5       | Maximum number of open tabs shown              |
-| Max bookmark results   | 5       | Maximum number of bookmarks shown              |
-| Max history results    | 5       | Maximum number of history entries shown        |
-| Search debounce (ms)   | 80      | Delay before triggering search while typing    |
-| History days           | 30      | How many days of browsing history to search    |
-| Min query length       | 2       | Minimum characters to search bookmarks/history |
-| Loading threshold (ms) | 300     | Delay before showing the loading indicator     |
+| Setting                | Default | Description                                                     |
+| ---------------------- | ------- | --------------------------------------------------------------- |
+| Max tab results        | 5       | Maximum number of open tabs shown                               |
+| Max bookmark results   | 5       | Maximum number of bookmarks shown                               |
+| Max history results    | 5       | Maximum number of history entries shown                         |
+| Search debounce (ms)   | 80      | Delay before triggering search while typing                     |
+| History days           | 30      | How many days of browsing history to search                     |
+| Min query length       | 2       | Minimum characters to search bookmarks/history                  |
+| Loading threshold (ms) | 300     | Delay before showing the loading indicator                      |
+| Full-text search       | off     | Search within page content of open tabs (slower with many tabs) |
 
 Settings are persisted in `browser.storage.local` and applied in real-time without reloading the extension.
 
+When full-text search is enabled, tabs whose page content matches the query are included in results with a content badge. Title/URL matches always appear first. Content extraction is skipped for privileged pages where script injection is not allowed.
+
 ## Known limitations
 
-- No full-text search in page content (matches title and URL only)
 - Does not work on `about:`, `moz-extension:`, or `file:` pages (Firefox WebExtension restriction)
 
 ## Testing

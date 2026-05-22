@@ -15,14 +15,15 @@
 
       <main>
         <form id="qal-options-form" class="qal-options-form" novalidate>
-
           <fieldset class="qal-options-fieldset">
             <legend class="qal-options-legend">Risultati per tipo</legend>
 
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-max-tab-results">
                 Schede aperte
-                <span class="qal-options-hint">Massimo risultati da schede aperte</span>
+                <span class="qal-options-hint"
+                  >Massimo risultati da schede aperte</span
+                >
               </label>
               <input
                 class="qal-options-input"
@@ -38,7 +39,9 @@
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-max-bookmark-results">
                 Segnalibri
-                <span class="qal-options-hint">Massimo risultati da segnalibri</span>
+                <span class="qal-options-hint"
+                  >Massimo risultati da segnalibri</span
+                >
               </label>
               <input
                 class="qal-options-input"
@@ -54,7 +57,9 @@
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-max-history-results">
                 Cronologia
-                <span class="qal-options-hint">Massimo risultati dalla cronologia</span>
+                <span class="qal-options-hint"
+                  >Massimo risultati dalla cronologia</span
+                >
               </label>
               <input
                 class="qal-options-input"
@@ -72,9 +77,30 @@
             <legend class="qal-options-legend">Comportamento</legend>
 
             <div class="qal-options-field">
+              <label
+                class="qal-options-label qal-options-label--checkbox"
+                for="qal-enable-fulltext-search"
+              >
+                <input
+                  type="checkbox"
+                  class="qal-options-checkbox"
+                  id="qal-enable-fulltext-search"
+                />
+                Ricerca nel contenuto delle schede
+                <span class="qal-options-hint"
+                  >Cerca anche nel testo delle pagine aperte (piu lento con
+                  molte schede)</span
+                >
+              </label>
+            </div>
+
+            <div class="qal-options-field">
               <label class="qal-options-label" for="qal-debounce-ms">
                 Ritardo ricerca (ms)
-                <span class="qal-options-hint">Attesa prima di avviare la ricerca durante la digitazione (0-2000)</span>
+                <span class="qal-options-hint"
+                  >Attesa prima di avviare la ricerca durante la digitazione
+                  (0-2000)</span
+                >
               </label>
               <input
                 class="qal-options-input"
@@ -90,7 +116,10 @@
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-history-days">
                 Giorni cronologia
-                <span class="qal-options-hint">Quanti giorni di cronologia includere nella ricerca (1-365)</span>
+                <span class="qal-options-hint"
+                  >Quanti giorni di cronologia includere nella ricerca
+                  (1-365)</span
+                >
               </label>
               <input
                 class="qal-options-input"
@@ -106,7 +135,10 @@
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-min-query-length">
                 Caratteri minimi per segnalibri e cronologia
-                <span class="qal-options-hint">Lunghezza minima della query per cercare in segnalibri e cronologia (1-10)</span>
+                <span class="qal-options-hint"
+                  >Lunghezza minima della query per cercare in segnalibri e
+                  cronologia (1-10)</span
+                >
               </label>
               <input
                 class="qal-options-input"
@@ -122,7 +154,10 @@
             <div class="qal-options-field">
               <label class="qal-options-label" for="qal-loading-threshold-ms">
                 Soglia indicatore caricamento (ms)
-                <span class="qal-options-hint">Attesa prima di mostrare l'indicatore di caricamento (0-5000)</span>
+                <span class="qal-options-hint"
+                  >Attesa prima di mostrare l'indicatore di caricamento
+                  (0-5000)</span
+                >
               </label>
               <input
                 class="qal-options-input"
@@ -136,17 +171,28 @@
             </div>
           </fieldset>
 
-          <p id="qal-feedback" class="qal-options-feedback" aria-live="polite"></p>
+          <p
+            id="qal-feedback"
+            class="qal-options-feedback"
+            aria-live="polite"
+          ></p>
 
           <div class="qal-options-actions">
-            <button type="submit" class="qal-options-btn qal-options-btn--primary" id="qal-save-btn">
+            <button
+              type="submit"
+              class="qal-options-btn qal-options-btn--primary"
+              id="qal-save-btn"
+            >
               Salva impostazioni
             </button>
-            <button type="button" class="qal-options-btn qal-options-btn--secondary" id="qal-reset-btn">
+            <button
+              type="button"
+              class="qal-options-btn qal-options-btn--secondary"
+              id="qal-reset-btn"
+            >
               Ripristina predefiniti
             </button>
           </div>
-
         </form>
       </main>
     </div>

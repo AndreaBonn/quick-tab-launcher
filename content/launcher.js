@@ -358,7 +358,12 @@
     const favicon = createFavicon(item, sectionKey);
     const textContainer = createResultText(item, query);
 
-    if (sectionKey === "tabs" && item.isCurrentWindow === false) {
+    if (item.isContentMatch) {
+      const contentBadge = createElement("span", "qal-content-badge");
+      contentBadge.textContent = "\u2261";
+      contentBadge.title = "Match nel contenuto";
+      el.append(favicon, contentBadge, textContainer);
+    } else if (sectionKey === "tabs" && item.isCurrentWindow === false) {
       const badge = createElement("span", "qal-window-badge");
       badge.textContent = "\u2197";
       badge.title = "Altra finestra";

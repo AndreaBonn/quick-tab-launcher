@@ -76,7 +76,12 @@ function loadBackground(browserMock) {
 
   // Clear module cache to re-execute background.js
   delete require.cache[require.resolve("../background/background.js")];
-  require("../background/background.js");
+  const bg = require("../background/background.js");
+
+  // Expose testable internals to globalThis for unit tests
+  if (bg && bg.extractTabContent) {
+    globalThis.extractTabContent = bg.extractTabContent;
+  }
 
   const commandListener =
     browserMock.commands.onCommand.addListener.mock.calls[0][0];
@@ -511,6 +516,207 @@ describe("background.js - searchTabs - all windows", () => {
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
     const results = sendResponse.mock.calls[0][0];
     expect(results.tabs[0].isCurrentWindow).toBe(false);
+  });
+});
+
+describe("background.js - extractTabContent", () => {
+  let browserMock;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    browserMock.tabs.executeScript = vi
+      .fn()
+      .mockResolvedValue(["Page content TEXT"]);
+    loadBackground(browserMock);
+  });
+
+  it("returns lowercase text from executeScript result", async () => {
+    const content = await globalThis.extractTabContent(1);
+    expect(content).toBe("page content text");
+  });
+
+  it("truncates content to FULLTEXT_MAX_LENGTH", async () => {
+    const longText = "a".repeat(20000);
+    browserMock.tabs.executeScript.mockResolvedValue([longText]);
+    const content = await globalThis.extractTabContent(1);
+    expect(content.length).toBeLessThanOrEqual(QAL_CONFIG.FULLTEXT_MAX_LENGTH);
+  });
+
+  it("returns empty string when executeScript throws", async () => {
+    browserMock.tabs.executeScript.mockRejectedValue(
+      new Error("Restricted page"),
+    );
+    const content = await globalThis.extractTabContent(1);
+    expect(content).toBe("");
+  });
+
+  it("returns empty string when executeScript returns falsy result", async () => {
+    browserMock.tabs.executeScript.mockResolvedValue([null]);
+    const content = await globalThis.extractTabContent(1);
+    expect(content).toBe("");
+  });
+});
+
+describe("background.js - fulltext search", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    browserMock.tabs.executeScript = vi
+      .fn()
+      .mockResolvedValue(["page content text"]);
+    ({ messageListener } = loadBackground(browserMock));
+  });
+
+  it("does NOT call executeScript when ENABLE_FULLTEXT_SEARCH is false", async () => {
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = false;
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 1,
+        title: "Unrelated",
+        url: "https://example.com",
+        active: false,
+        windowId: 1,
+      },
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "content" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(browserMock.tabs.executeScript).not.toHaveBeenCalled();
+  });
+
+  it("calls executeScript for non-matching tabs when ENABLE_FULLTEXT_SEARCH is true", async () => {
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = true;
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 1,
+        title: "Unrelated",
+        url: "https://example.com",
+        active: false,
+        windowId: 1,
+      },
+    ]);
+    browserMock.tabs.executeScript.mockResolvedValue([
+      "contains the search term here",
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "search term" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(browserMock.tabs.executeScript).toHaveBeenCalledWith(
+      1,
+      expect.any(Object),
+    );
+    const results = sendResponse.mock.calls[0][0];
+    expect(results.tabs).toHaveLength(1);
+    expect(results.tabs[0].isContentMatch).toBe(true);
+  });
+
+  it("title/url match has priority over content match", async () => {
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = true;
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 1,
+        title: "term in title",
+        url: "https://example.com",
+        active: false,
+        windowId: 1,
+      },
+      {
+        id: 2,
+        title: "Unrelated",
+        url: "https://other.com",
+        active: false,
+        windowId: 1,
+      },
+    ]);
+    browserMock.tabs.executeScript.mockResolvedValue([
+      "page has the term in body",
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "term" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    const results = sendResponse.mock.calls[0][0];
+    expect(results.tabs[0].id).toBe(1);
+    expect(results.tabs[0].isContentMatch).toBeFalsy();
+    expect(results.tabs[1].id).toBe(2);
+    expect(results.tabs[1].isContentMatch).toBe(true);
+  });
+
+  it("does NOT call executeScript for tabs already matched by title/url", async () => {
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = true;
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 1,
+        title: "term in title",
+        url: "https://example.com",
+        active: false,
+        windowId: 1,
+      },
+    ]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "term" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(browserMock.tabs.executeScript).not.toHaveBeenCalled();
+  });
+
+  it("skips tab without error when executeScript fails on it", async () => {
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = true;
+    browserMock.tabs.query.mockResolvedValue([
+      {
+        id: 1,
+        title: "Unrelated",
+        url: "about:blank",
+        active: false,
+        windowId: 1,
+      },
+      {
+        id: 2,
+        title: "Unrelated2",
+        url: "https://other.com",
+        active: false,
+        windowId: 1,
+      },
+    ]);
+    browserMock.tabs.executeScript
+      .mockRejectedValueOnce(new Error("Restricted"))
+      .mockResolvedValueOnce(["contains the search content here"]);
+
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "search", query: "search content" },
+      { tab: { id: 99, windowId: 1 } },
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    const results = sendResponse.mock.calls[0][0];
+    expect(results.tabs).toHaveLength(1);
+    expect(results.tabs[0].id).toBe(2);
   });
 });
 

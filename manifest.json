@@ -16,7 +16,14 @@
     },
     "default_title": "Quick Actions Launcher"
   },
-  "permissions": ["tabs", "bookmarks", "history", "activeTab", "storage"],
+  "permissions": [
+    "tabs",
+    "bookmarks",
+    "history",
+    "activeTab",
+    "storage",
+    "<all_urls>"
+  ],
   "options_ui": {
     "page": "options/options.html",
     "browser_style": false
