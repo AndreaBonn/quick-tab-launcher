@@ -71,6 +71,7 @@
     searchContainer.append(searchIcon, input, fulltextToggle, shortcutHint);
 
     const results = createElement("div", "qal-results");
+    results.setAttribute("role", "listbox");
     const footer = createFooter();
 
     panel.append(searchContainer, results, footer);
@@ -289,7 +290,9 @@
   function updateSelection() {
     const items = state.shadowRoot.querySelectorAll(".qal-result-item");
     for (let i = 0; i < items.length; i++) {
-      items[i].classList.toggle("qal-selected", i === state.selectedIndex);
+      const isSelected = i === state.selectedIndex;
+      items[i].classList.toggle("qal-selected", isSelected);
+      items[i].setAttribute("aria-selected", String(isSelected));
     }
     const selected = items[state.selectedIndex];
     if (selected?.scrollIntoView) {
@@ -420,6 +423,8 @@
 
   function createResultItem(item, sectionKey, query, index) {
     const el = createElement("div", "qal-result-item");
+    el.setAttribute("role", "option");
+    el.setAttribute("aria-selected", "false");
     el.dataset.type = sectionKey;
     el.dataset.id = item.id;
     el.dataset.url = item.url || "";

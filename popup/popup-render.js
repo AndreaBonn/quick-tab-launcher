@@ -60,6 +60,8 @@ function createResultText(item, query) {
 
 function createResultItem(item, sectionKey, query, index) {
   const el = createElement("div", "qal-result-item");
+  el.setAttribute("role", "option");
+  el.setAttribute("aria-selected", "false");
   el.dataset.type = sectionKey;
   el.dataset.id = item.id;
   el.dataset.url = item.url || "";
@@ -148,7 +150,9 @@ function renderError(container) {
 function updateSelection(container, selectedIndex) {
   const items = container.querySelectorAll(".qal-result-item");
   for (let i = 0; i < items.length; i++) {
-    items[i].classList.toggle("qal-selected", i === selectedIndex);
+    const isSelected = i === selectedIndex;
+    items[i].classList.toggle("qal-selected", isSelected);
+    items[i].setAttribute("aria-selected", String(isSelected));
   }
   const selected = items[selectedIndex];
   if (selected?.scrollIntoView) {
