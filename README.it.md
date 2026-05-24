@@ -4,6 +4,7 @@
 
 Estensione Firefox che aggiunge una palette comandi in stile Spotlight per cercare schede aperte, segnalibri e cronologia con una scorciatoia da tastiera.
 
+[![Versione AMO](https://img.shields.io/amo/v/quick-tab-launcher?label=AMO&logo=firefoxbrowser)](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/)
 [![Installa da AMO](https://img.shields.io/badge/Firefox_Add--ons-Installa-ff7139?logo=firefoxbrowser)](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/)
 [![CI](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml/badge.svg)](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/quick-tab-launcher/main/badges/test-badge.json)](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml)
@@ -20,6 +21,10 @@ Estensione Firefox che aggiunge una palette comandi in stile Spotlight per cerca
 </p>
 
 Premi `Ctrl+Shift+Space` (o clicca l'icona nella toolbar) per aprire un pannello overlay. Digita per filtrare contemporaneamente schede, segnalibri e cronologia. I risultati sono raggruppati per fonte, deduplicati e navigabili da tastiera o mouse.
+
+## Installa
+
+Installa direttamente dallo [store Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/).
 
 ## Stack tecnologico
 
@@ -97,18 +102,9 @@ quick-tab-launcher__firefox/
 └── vitest.config.mjs         # Vitest + jsdom + coverage v8
 ```
 
-## Prerequisiti
+## Development setup
 
-- Firefox 91 o successivo
-- Node.js 20+ (solo per lo sviluppo)
-
-## Installazione
-
-### Da Firefox Add-ons (consigliato)
-
-Installa direttamente dallo [store Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/).
-
-### Da sorgente (sviluppo)
+Prerequisiti: Firefox 91+, Node.js 20+.
 
 1. Clona il repository
 2. Installa le dipendenze di sviluppo:

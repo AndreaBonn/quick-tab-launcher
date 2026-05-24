@@ -4,6 +4,7 @@
 
 A Firefox extension that adds a Spotlight-style command palette for searching open tabs, bookmarks, and browsing history from a single keyboard shortcut.
 
+[![AMO version](https://img.shields.io/amo/v/quick-tab-launcher?label=AMO&logo=firefoxbrowser)](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/)
 [![Install from AMO](https://img.shields.io/badge/Firefox_Add--ons-Install-ff7139?logo=firefoxbrowser)](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/)
 [![CI](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml/badge.svg)](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/quick-tab-launcher/main/badges/test-badge.json)](https://github.com/AndreaBonn/quick-tab-launcher/actions/workflows/ci.yml)
@@ -20,6 +21,10 @@ A Firefox extension that adds a Spotlight-style command palette for searching op
 </p>
 
 Type `Ctrl+Shift+Space` (or click the toolbar icon) to open an overlay panel. Start typing to filter across tabs, bookmarks, and history simultaneously. Results are grouped by source, deduplicated, and navigable with keyboard or mouse.
+
+## Install
+
+Install directly from the [Firefox Add-ons store](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/).
 
 ## Tech stack
 
@@ -97,18 +102,9 @@ quick-tab-launcher__firefox/
 └── vitest.config.mjs         # Vitest + jsdom + v8 coverage
 ```
 
-## Prerequisites
+## Development setup
 
-- Firefox 91 or later
-- Node.js 20+ (for development only)
-
-## Installation
-
-### From Firefox Add-ons (recommended)
-
-Install directly from the [Firefox Add-ons store](https://addons.mozilla.org/en-US/firefox/addon/quick-tab-launcher/).
-
-### From source (development)
+Prerequisites: Firefox 91+, Node.js 20+.
 
 1. Clone the repository
 2. Install development dependencies:
