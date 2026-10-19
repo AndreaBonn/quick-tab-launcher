@@ -100,6 +100,9 @@ export function loadBackground(browserMock) {
   delete require.cache[require.resolve("../../background/search.js")];
   Object.assign(globalThis, require("../../background/search.js"));
 
+  delete require.cache[require.resolve("../../background/navigation.js")];
+  Object.assign(globalThis, require("../../background/navigation.js"));
+
   // Clear module cache to re-execute background.js
   delete require.cache[require.resolve("../../background/background.js")];
   const bg = require("../../background/background.js");

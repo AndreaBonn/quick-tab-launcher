@@ -41,6 +41,7 @@
       "src/commands.js",
       "background/tab-commands.js",
       "background/search.js",
+      "background/navigation.js",
       "background/background.js"
     ],
     "persistent": true
