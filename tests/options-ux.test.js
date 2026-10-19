@@ -310,3 +310,61 @@ describe("web search switch (R9)", () => {
     });
   });
 });
+
+describe("web search switch robustness (R9 review)", () => {
+  async function openWithPermissions(permissions) {
+    const browserMock = await openOptions();
+    browserMock.permissions = permissions;
+    globalThis.browser = browserMock;
+    delete require.cache[require.resolve("../options/options.js")];
+    let onReady;
+    const spy = vi
+      .spyOn(document, "addEventListener")
+      .mockImplementation((type, handler) => {
+        if (type === "DOMContentLoaded") onReady = handler;
+      });
+    require("../options/options.js");
+    spy.mockRestore();
+    document.body.innerHTML = OPTIONS_HTML.slice(
+      OPTIONS_HTML.indexOf("<body>") + "<body>".length,
+      OPTIONS_HTML.indexOf("<script"),
+    );
+    await onReady();
+    await new Promise((r) => setTimeout(r, 0));
+    return browserMock;
+  }
+
+  it("falls back to the real state when Firefox rejects the request", async () => {
+    await openWithPermissions({
+      contains: vi.fn().mockResolvedValue(false),
+      request: vi.fn().mockRejectedValue(new Error("not a user action")),
+      remove: vi.fn(),
+      onAdded: { addListener: vi.fn() },
+      onRemoved: { addListener: vi.fn() },
+    });
+    const sw = $("#qal-web-search");
+    sw.checked = true;
+    sw.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(sw.checked).toBe(false);
+    expect($("#qal-feedback").textContent).not.toBe("");
+  });
+
+  it("follows a permission revoked from the add-ons manager", async () => {
+    const onRemoved = { addListener: vi.fn() };
+    const contains = vi.fn().mockResolvedValue(true);
+    await openWithPermissions({
+      contains,
+      request: vi.fn(),
+      remove: vi.fn(),
+      onAdded: { addListener: vi.fn() },
+      onRemoved,
+    });
+    const sw = $("#qal-web-search");
+    expect(sw.checked).toBe(true);
+    contains.mockResolvedValue(false);
+    onRemoved.addListener.mock.calls[0][0]({ permissions: ["search"] });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(sw.checked).toBe(false);
+  });
+});

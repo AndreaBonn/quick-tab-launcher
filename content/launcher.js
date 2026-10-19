@@ -886,6 +886,13 @@
   function removeResultItem(itemEl, tabId) {
     state.results.tabs = state.results.tabs.filter((tab) => tab.id !== tabId);
     rebuildFlatResults();
+    // Last result gone: re-render so what Enter runs (web row or nothing)
+    // is what the list shows.
+    if (state.flatResults.every((item) => item.type === "web-search")) {
+      state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
+      renderCurrentView(state.elements.input.value);
+      return;
+    }
 
     itemEl.remove();
 

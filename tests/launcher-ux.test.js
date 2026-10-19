@@ -671,3 +671,29 @@ describe("web search when nothing matches (R9)", () => {
     ).toBeNull();
   });
 });
+
+describe("web row after closing the last result (R9 review)", () => {
+  it("shows the web row that Enter will run", async () => {
+    const { shadowRoot, browserMock, input } = await openWith({
+      "get-web-search-state": { enabled: true },
+      search: () => ({
+        tabs: [{ id: 5, title: "Solo", url: "https://solo.com" }],
+        bookmarks: [],
+        history: [],
+      }),
+      "close-tab": { closed: 1 },
+    });
+    await type(input, "solo");
+    press(input, "w", { code: "KeyW", altKey: true });
+    await settle();
+
+    const row = shadowRoot.querySelector(".qal-result-item.qal-selected");
+    expect(row.dataset.type).toBe("web-search");
+    press(input, "Enter");
+    expect(sentActions(browserMock)).toContainEqual({
+      action: "web-search",
+      query: "solo",
+      newTab: false,
+    });
+  });
+});

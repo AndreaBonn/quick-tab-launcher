@@ -249,18 +249,39 @@ async function setupWebSearch() {
   } catch (err) {
     console.warn("Quick TAB Launcher: permission state unavailable", err);
   }
+  // Follow changes made elsewhere, e.g. revoked from the add-ons manager.
+  const sync = (change) => {
+    if (change.permissions?.includes("search")) syncWebSearchToggle(toggle);
+  };
+  browser.permissions.onAdded?.addListener(sync);
+  browser.permissions.onRemoved?.addListener(sync);
+
   toggle.addEventListener("change", async (event) => {
     // Not part of the saved settings: the permission itself is the state.
     event.stopPropagation();
-    if (!toggle.checked) {
-      await browser.permissions.remove(WEB_SEARCH_PERMISSION);
-      return;
+    try {
+      if (!toggle.checked) {
+        await browser.permissions.remove(WEB_SEARCH_PERMISSION);
+        return;
+      }
+      // request() must be the first call in the user's click handler.
+      const granted = await browser.permissions.request(WEB_SEARCH_PERMISSION);
+      toggle.checked = granted;
+      if (!granted) showFeedback(t("options.feedback.webSearchDenied"), true);
+    } catch (err) {
+      console.warn("Quick TAB Launcher: permission change failed", err);
+      showFeedback(t("options.feedback.webSearchDenied"), true);
+      await syncWebSearchToggle(toggle);
     }
-    // request() must be the first call in the user's click handler.
-    const granted = await browser.permissions.request(WEB_SEARCH_PERMISSION);
-    toggle.checked = granted;
-    if (!granted) showFeedback(t("options.feedback.webSearchDenied"), true);
   });
+}
+
+async function syncWebSearchToggle(toggle) {
+  try {
+    toggle.checked = await browser.permissions.contains(WEB_SEARCH_PERMISSION);
+  } catch {
+    toggle.checked = false;
+  }
 }
 
 function setupShortcut() {
