@@ -150,74 +150,100 @@ browser.tabs
     if (activeTab?.id) updatePopupForTab(activeTab.id);
   });
 
+function logRouteFailure(action) {
+  return (err) =>
+    console.warn(`Quick TAB Launcher: "${action}" handler failed`, err);
+}
+
 const MESSAGE_ROUTES = {
-  "search": (message, sender, sendResponse) => {
+  search: (message, sender, sendResponse) => {
     const senderWindowId = sender.tab?.windowId;
-    handleSearch(message.query, senderWindowId).then(sendResponse);
+    handleSearch(message.query, senderWindowId)
+      .then(sendResponse)
+      .catch(logRouteFailure("search"));
     return true;
   },
-  "navigate": (message, sender) => {
-    handleNavigate(message, sender.tab?.id);
+  navigate: (message, sender) => {
+    handleNavigate(message, sender.tab?.id).catch(logRouteFailure("navigate"));
     return false;
   },
   "close-tab": (message, _sender, sendResponse) => {
-    handleCloseTab(message.tabId).then((ok) =>
-      sendResponse({ closed: ok ? 1 : 0 }),
-    );
+    handleCloseTab(message.tabId)
+      .then((ok) => sendResponse({ closed: ok ? 1 : 0 }))
+      .catch(logRouteFailure("close-tab"));
     return true;
   },
   "get-recent-tabs": (_message, sender, sendResponse) => {
     resolveCurrentTabId(sender)
       .then((tabId) => getRecentTabs(tabId))
-      .then(sendResponse);
+      .then(sendResponse)
+      .catch(logRouteFailure("get-recent-tabs"));
     return true;
   },
   "get-active-tab-state": (_message, sender, sendResponse) => {
-    getActiveTabState(sender.tab).then(sendResponse);
+    getActiveTabState(sender.tab)
+      .then(sendResponse)
+      .catch(logRouteFailure("get-active-tab-state"));
     return true;
   },
   "preview-command": (message, _sender, sendResponse) => {
-    previewCommand(message.commandId).then(sendResponse);
+    previewCommand(message.commandId)
+      .then(sendResponse)
+      .catch(logRouteFailure("preview-command"));
     return true;
   },
   "undo-close": (message, _sender, sendResponse) => {
-    undoClose(message.count).then(sendResponse);
+    undoClose(message.count)
+      .then(sendResponse)
+      .catch(logRouteFailure("undo-close"));
     return true;
   },
   "get-web-search-state": (_message, _sender, sendResponse) => {
-    hasWebSearchPermission().then((enabled) => sendResponse({ enabled }));
+    hasWebSearchPermission()
+      .then((enabled) => sendResponse({ enabled }))
+      .catch(logRouteFailure("get-web-search-state"));
     return true;
   },
   "web-search": (message, sender, sendResponse) => {
-    runWebSearch(message, sender.tab?.id).then((ok) => sendResponse({ ok }));
+    runWebSearch(message, sender.tab?.id)
+      .then((ok) => sendResponse({ ok }))
+      .catch(logRouteFailure("web-search"));
     return true;
   },
   "open-options": () => {
-    browser.runtime.openOptionsPage();
+    browser.runtime.openOptionsPage().catch(logRouteFailure("open-options"));
     return false;
   },
   "refresh-action-title": () => {
-    refreshActionTitle();
+    refreshActionTitle().catch(logRouteFailure("refresh-action-title"));
     return false;
   },
   "restore-session": (message) => {
-    restoreSession(message.sessionId);
+    restoreSession(message.sessionId).catch(logRouteFailure("restore-session"));
     return false;
   },
   "get-duplicate-count": (_message, _sender, sendResponse) => {
-    getDuplicateSummary().then(sendResponse);
+    getDuplicateSummary()
+      .then(sendResponse)
+      .catch(logRouteFailure("get-duplicate-count"));
     return true;
   },
   "close-duplicates": (_message, _sender, sendResponse) => {
-    closeDuplicateTabs().then(sendResponse);
+    closeDuplicateTabs()
+      .then(sendResponse)
+      .catch(logRouteFailure("close-duplicates"));
     return true;
   },
   "execute-command": (message, _sender, sendResponse) => {
-    executeCommand(message.commandId).then(sendResponse);
+    executeCommand(message.commandId)
+      .then(sendResponse)
+      .catch(logRouteFailure("execute-command"));
     return true;
   },
   "close-domain-tabs": (message, _sender, sendResponse) => {
-    closeDomainTabs(message.domain).then(sendResponse);
+    closeDomainTabs(message.domain)
+      .then(sendResponse)
+      .catch(logRouteFailure("close-domain-tabs"));
     return true;
   },
 };

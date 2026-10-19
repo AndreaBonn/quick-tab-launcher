@@ -58,6 +58,25 @@ describe("background message routes", () => {
   });
 
   it.each([
+    ...ASYNC_ROUTES.filter((route, index, all) => all.findIndex((r) => r.handler === route.handler) === index),
+    { action: "restore-session", fields: { sessionId: "session-23" }, handler: "restoreSession" },
+  ])("$action logs a failing handler in the background", async ({ action, handler, fields }) => {
+    const failure = new Error(`${handler} failed`);
+    vi.stubGlobal(handler, vi.fn().mockRejectedValue(failure));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const sendResponse = vi.fn();
+
+    messageListener({ action, ...fields }, SENDER, sendResponse);
+
+    await vi.waitFor(() => expect(warn).toHaveBeenCalledWith(
+      `Quick TAB Launcher: "${action}" handler failed`,
+      failure,
+    ));
+    expect(sendResponse).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it.each([
     { action: "navigate", fields: { type: "tab", tabId: 23 }, handler: "handleNavigate" },
     { action: "open-options" },
     { action: "refresh-action-title" },
