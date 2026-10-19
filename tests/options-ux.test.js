@@ -43,6 +43,23 @@ function createBrowserMock({ shortcut = "Ctrl+Shift+Space", locale } = {}) {
   };
 }
 
+// options.js and options-shortcut.js attach listeners to `document`, which
+// outlives each test. Left in place, every earlier page instance re-runs on
+// the next DOMContentLoaded and re-subscribes to locale changes, so the work
+// per test grows with the number of tests that ran before it.
+const documentListeners = [];
+const realAddEventListener = document.addEventListener.bind(document);
+document.addEventListener = (type, listener, options) => {
+  documentListeners.push([type, listener, options]);
+  realAddEventListener(type, listener, options);
+};
+
+function releaseDocumentListeners() {
+  for (const [type, listener, options] of documentListeners.splice(0)) {
+    document.removeEventListener(type, listener, options);
+  }
+}
+
 async function openOptions(options) {
   const browserMock = createBrowserMock(options);
   globalThis.browser = browserMock;
@@ -68,6 +85,7 @@ async function openOptions(options) {
 const $ = (sel) => document.querySelector(sel);
 
 afterEach(() => {
+  releaseDocumentListeners();
   document.body.innerHTML = "";
   delete globalThis.browser;
   vi.useRealTimers();
