@@ -48,7 +48,7 @@ export default [
     rules: { "max-lines": "off" },
   },
   {
-    files: ["tests/**/*.js", "vitest.config.js", "eslint.config.js"],
+    files: ["tests/**/*.js", "vitest.config.mjs", "eslint.config.mjs"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",

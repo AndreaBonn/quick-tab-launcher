@@ -578,6 +578,15 @@ describe("background.js - extractTabContent", () => {
     expect(content).toBe("page content text");
   });
 
+  it("injects an extraction script that exists in the extension", async () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    await globalThis.extractTabContent(7);
+    const [tabId, { file }] = browserMock.tabs.executeScript.mock.calls[0];
+    expect(tabId).toBe(7);
+    expect(fs.existsSync(path.join(__dirname, "..", file))).toBe(true);
+  });
+
   it("truncates content to FULLTEXT_MAX_LENGTH", async () => {
     const longText = "a".repeat(20000);
     browserMock.tabs.executeScript.mockResolvedValue([longText]);
