@@ -27,6 +27,15 @@ function createBrowserMock(storedConfig = {}) {
     [CONFIG_STORAGE_KEY]: storedConfig,
   };
   return {
+    // The real options page always has these APIs; the page reads them on load.
+    permissions: {
+      contains: vi.fn().mockResolvedValue(false),
+      request: vi.fn().mockResolvedValue(false),
+      remove: vi.fn().mockResolvedValue(true),
+      onAdded: { addListener: vi.fn() },
+      onRemoved: { addListener: vi.fn() },
+    },
+    commands: { getAll: vi.fn().mockResolvedValue([]) },
     storage: {
       local: {
         get: vi.fn(async (key) => {

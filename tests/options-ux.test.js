@@ -17,6 +17,13 @@ function createBrowserMock({ shortcut = "Ctrl+Shift+Space", locale } = {}) {
       getURL: vi.fn((p) => `moz-extension://id/${p}`),
     },
     tabs: { create: vi.fn().mockResolvedValue({}) },
+    permissions: {
+      contains: vi.fn().mockResolvedValue(false),
+      request: vi.fn().mockResolvedValue(false),
+      remove: vi.fn().mockResolvedValue(true),
+      onAdded: { addListener: vi.fn() },
+      onRemoved: { addListener: vi.fn() },
+    },
     commands: {
       getAll: vi
         .fn()
