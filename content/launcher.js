@@ -1,10 +1,9 @@
-/* global createPanelState, createPanelView, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderDuplicateBanner, renderEmpty, filterCommands, createIcon, tCount, renderGuide, renderQuickActions, buildToast, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide, createPanelController */
+/* global createPanelState, createPanelView, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createOverlayDOM, translateOverlayDOM, renderDuplicateBanner, renderEmpty, filterCommands, tCount, renderGuide, renderQuickActions, buildToast, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide, createPanelController */
 
 (function () {
   "use strict";
 
   const HOST_ELEMENT_ID = "qal-shadow-host";
-  const RESULTS_ELEMENT_ID = "qal-results";
   const PAGE_TOAST_MS = 6000;
   const DUPLICATES_DISMISSED_KEY = "qal_duplicates_dismissed";
   const QUICK_COMMAND_IDS = [
@@ -38,7 +37,10 @@
 
     state.shadowRoot = host.attachShadow({ mode: "closed" });
     loadStyles();
-    createOverlayDOM();
+    state.elements = createOverlayDOM(state.shadowRoot);
+    panelView = createPanelView({ state, elements: state.elements });
+    setupPanelController();
+    applyOverlayTranslations();
     setupListeners();
   }
 
@@ -48,102 +50,6 @@
     link.rel = "stylesheet";
     link.href = cssUrl;
     state.shadowRoot.appendChild(link);
-  }
-
-  function createOverlayDOM() {
-    const overlay = createElement("div", "qal-overlay");
-    overlay.style.display = "none";
-
-    const backdrop = createElement("div", "qal-backdrop");
-    const panel = createElement("div", "qal-panel");
-    panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", "Quick Tab Launcher");
-
-    const searchContainer = createElement("div", "qal-search-container");
-    const searchIcon = createElement("span", "qal-search-icon");
-    const lens = createIcon("search", 18);
-    if (lens) searchIcon.appendChild(lens);
-    const input = createElement("input", "qal-input");
-    input.type = "text";
-    input.placeholder = t("launcher.placeholder");
-    input.autocomplete = "off";
-    input.spellcheck = false;
-    input.setAttribute("role", "combobox");
-    input.setAttribute("aria-label", t("launcher.inputLabel"));
-    input.setAttribute("aria-controls", RESULTS_ELEMENT_ID);
-    input.setAttribute("aria-expanded", "true");
-    input.setAttribute("aria-autocomplete", "list");
-
-    const groupToggle = createElement("button", "qal-toggle qal-group-toggle");
-    groupToggle.type = "button";
-    const fulltextToggle = createElement(
-      "button",
-      "qal-toggle qal-fulltext-toggle",
-    );
-    fulltextToggle.type = "button";
-
-    const settingsBtn = createElement("button", "qal-icon-btn");
-    settingsBtn.type = "button";
-    settingsBtn.dataset.qalAction = "open-options";
-    const gear = createIcon("gear");
-    if (gear) settingsBtn.appendChild(gear);
-
-    searchContainer.append(
-      searchIcon,
-      input,
-      groupToggle,
-      fulltextToggle,
-      settingsBtn,
-    );
-
-    const quickActions = createElement("div", "qal-quick-actions");
-    const guide = createElement("div", "qal-guide");
-    guide.hidden = true;
-    const toastSlot = createElement("div", "qal-toast-slot");
-    toastSlot.setAttribute("aria-live", "polite");
-    // The banner has its own buttons, so it lives outside the listbox.
-    const duplicatesSlot = createElement("div", "qal-duplicates-slot");
-
-    const results = createElement("div", "qal-results");
-    results.id = RESULTS_ELEMENT_ID;
-    results.setAttribute("role", "listbox");
-    results.activeDescendantOwner = input;
-    const footer = createElement("div", "qal-footer");
-
-    panel.append(
-      searchContainer,
-      quickActions,
-      guide,
-      toastSlot,
-      duplicatesSlot,
-      results,
-      footer,
-    );
-    overlay.append(backdrop, panel);
-    // Outcome messages shown after the panel closes (C2) live outside it.
-    const pageToastSlot = createElement("div", "qal-page-toast-slot");
-    pageToastSlot.setAttribute("aria-live", "polite");
-    state.shadowRoot.append(overlay, pageToastSlot);
-
-    state.elements = {
-      overlay,
-      backdrop,
-      panel,
-      input,
-      results,
-      footer,
-      groupToggle,
-      fulltextToggle,
-      settingsBtn,
-      quickActions,
-      guide,
-      toastSlot,
-      duplicatesSlot,
-      pageToastSlot,
-    };
-    panelView = createPanelView({ state, elements: state.elements });
-    setupPanelController();
-    applyOverlayTranslations();
   }
 
   function setupPanelController() {
@@ -170,14 +76,7 @@
   }
 
   function applyOverlayTranslations() {
-    const { input, groupToggle, fulltextToggle, settingsBtn } = state.elements;
-    settingsBtn.title = t("launcher.settings");
-    settingsBtn.setAttribute("aria-label", t("launcher.settings"));
-    input.placeholder = t("launcher.placeholder");
-    input.setAttribute("aria-label", t("launcher.inputLabel"));
-    groupToggle.textContent = t("launcher.groupToggle");
-    groupToggle.title = t("launcher.groupToggle.tooltip");
-    fulltextToggle.textContent = t("launcher.fulltextToggle");
+    translateOverlayDOM(state.elements);
     panelController.updateToggleStates();
     panelView.renderFooter();
   }

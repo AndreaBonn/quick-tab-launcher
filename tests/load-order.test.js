@@ -150,3 +150,22 @@ describe.each(["content", "popup"])("%s panel controller loading", (point) => {
     }
   });
 });
+
+describe("launcher DOM loading", () => {
+  it("builds an overlay using the DOM module loaded before the launcher", () => {
+    const dom = loadWindow("content");
+    try {
+      for (const { file, source } of sourcesFor("content").slice(0, -1)) {
+        vm.runInContext(source, dom.getInternalVMContext(), { filename: file });
+      }
+      const root = dom.window.document.createElement("div").attachShadow({ mode: "closed" });
+      const elements = dom.window.eval("createOverlayDOM")(root);
+      dom.window.eval("translateOverlayDOM")(elements);
+      expect(elements.input.getAttribute("aria-controls")).toBe(elements.results.id);
+      expect(elements.input.placeholder).toBe(dom.window.eval('t("launcher.placeholder")'));
+      expect(root.querySelector('[role="listbox"]')).toBe(elements.results);
+    } finally {
+      dom.window.close();
+    }
+  });
+});
