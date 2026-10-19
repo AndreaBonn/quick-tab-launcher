@@ -1,4 +1,4 @@
-/* global createPanelState, createPanelView, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createOverlayDOM, translateOverlayDOM, createDuplicatesBanner, renderEmpty, filterCommands, tCount, renderGuide, renderQuickActions, buildToast, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide, createPanelController */
+/* global createPanelState, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createOverlayDOM, translateOverlayDOM, createDuplicatesBanner, renderEmpty, filterCommands, tCount, renderGuide, renderQuickActions, buildToast, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide, createPanelController */
 
 (function () {
   "use strict";
@@ -37,8 +37,8 @@
     state.shadowRoot = host.attachShadow({ mode: "closed" });
     loadStyles();
     state.elements = createOverlayDOM(state.shadowRoot);
-    panelView = createPanelView({ state, elements: state.elements });
     setupPanelController();
+    panelView = panelController.view;
     applyOverlayTranslations();
     duplicatesBanner = createDuplicatesBanner({
       slot: state.elements.duplicatesSlot, browser,

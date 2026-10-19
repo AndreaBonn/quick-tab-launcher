@@ -1,8 +1,20 @@
 /* global createPanelView, createPanelActions, isCommandMode, browser, QAL_CONFIG, renderEmpty, renderLoading, renderError, renderCommandResults, renderRecentTabs, updateSelection, filterCommands, matchCommandsForSearch, loadUserConfig, saveUserConfig, t */
 
+/**
+ * Host contract: every hook is required, the controller has no defaults.
+ * @typedef {object} PanelHooks
+ * @property {() => boolean} isActive Whether the host is showing the panel; late replies are dropped when false.
+ * @property {() => void} close Close the host (Escape with nothing to cancel).
+ * @property {(item: object) => void} afterNavigate Called after a result was opened, with the selected item.
+ * @property {(commandId: string) => void} runCommand Run a command; the host owns closing and feedback.
+ * @property {() => void} onNothingToConfirm A confirmable command would affect nothing.
+ * @property {(query: string) => void} onQueryChange The input changed; receives the raw query.
+ * @property {() => void} onActiveTabState The active tab state was refreshed and the host is active.
+ */
+
 function createPanelController({ state, elements, hooks, logPrefix = "Quick TAB Launcher" }) {
   const context = { state, elements, hooks, logPrefix, view: createPanelView({ state, elements }) };
-  const controller = { state, ...createPanelActions(context) };
+  const controller = { state, view: context.view, ...createPanelActions(context) };
   context.controller = controller;
   const methods = {
     handleInput: panelHandleInput, fetchRecentTabs: panelFetchRecentTabs,

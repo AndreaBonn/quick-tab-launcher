@@ -1,4 +1,4 @@
-/* global createPanelState, createPanelView, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, renderEmpty, loadLocale, applyTranslations, onLocaleChange, createIcon, t, createPanelController */
+/* global createPanelState, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, renderEmpty, loadLocale, applyTranslations, onLocaleChange, createIcon, t, createPanelController */
 
 const state = {
   ...createPanelState(),
@@ -58,8 +58,8 @@ function runCommand(commandId) {
 
 function init() {
   captureElements();
-  panelView = createPanelView({ state, elements: state.elements });
   setupPanelController();
+  panelView = panelController.view;
   const { input, results } = state.elements;
 
   const lens = createIcon("search", 18);
