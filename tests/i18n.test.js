@@ -151,7 +151,7 @@ describe("i18n - applyTranslations()", () => {
       '<input data-i18n-placeholder="launcher.placeholder" />';
     applyTranslations(document);
     expect(document.querySelector("input").placeholder).toBe(
-      "Cerca schede, segnalibri, cronologia...",
+      "Cerca schede, segnalibri, cronologia o > per le azioni",
     );
   });
 
@@ -179,6 +179,43 @@ describe("i18n - dictionary completeness", () => {
   it("no empty values in EN dictionary", () => {
     for (const [key, value] of Object.entries(I18N_MESSAGES.en)) {
       expect(value, `EN key "${key}" should not be empty`).toBeTruthy();
+    }
+  });
+});
+
+describe("i18n - user-facing wording", () => {
+  it("placeholder mentions the > prefix in both locales", () => {
+    expect(I18N_MESSAGES.it["launcher.placeholder"]).toContain(">");
+    expect(I18N_MESSAGES.en["launcher.placeholder"]).toContain(">");
+  });
+
+  it("fulltext toggle label says what it does", () => {
+    expect(I18N_MESSAGES.it["launcher.fulltextToggle"]).toBe("Cerca nel testo");
+    expect(I18N_MESSAGES.en["launcher.fulltextToggle"]).toBe("Search text");
+  });
+
+  it("product name is spelled Quick Tab Launcher", () => {
+    expect(I18N_MESSAGES.it["options.title"]).toBe("Quick Tab Launcher");
+    expect(I18N_MESSAGES.en["options.title"]).toBe("Quick Tab Launcher");
+  });
+
+  it("Italian texts use accented vowels, not keyboard fallbacks", () => {
+    const unaccented = /\b(piu|perche|puo|gia|cosi|e')\b/i;
+    for (const [key, value] of Object.entries(I18N_MESSAGES.it)) {
+      expect(unaccented.test(value), `IT key "${key}": ${value}`).toBe(false);
+    }
+    expect(unaccented.test("piu lento")).toBe(true);
+  });
+
+  it("command descriptions do not repeat the command label", () => {
+    for (const locale of ["it", "en"]) {
+      const dict = I18N_MESSAGES[locale];
+      for (const key of Object.keys(dict).filter((k) => k.endsWith(".desc"))) {
+        const label = dict[key.replace(/\.desc$/, "")];
+        expect(dict[key].toLowerCase(), `${locale} ${key}`).not.toContain(
+          label.toLowerCase(),
+        );
+      }
     }
   });
 });

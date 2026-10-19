@@ -116,18 +116,16 @@ function createResultItem(item, sectionKey, query, index) {
   const favicon = createFavicon(item, sectionKey);
   const textContainer = createResultText(item, query);
 
+  el.append(favicon, textContainer);
   if (item.isContentMatch) {
     const contentBadge = createElement("span", "qal-content-badge");
-    contentBadge.textContent = "\u2261";
-    contentBadge.title = t("badges.contentMatch");
-    el.append(favicon, contentBadge, textContainer);
+    contentBadge.textContent = t("badges.contentMatch");
+    contentBadge.title = t("badges.contentMatch.tooltip");
+    el.appendChild(contentBadge);
   } else if (sectionKey === "tabs" && item.isCurrentWindow === false) {
     const badge = createElement("span", "qal-window-badge");
-    badge.textContent = "\u2197";
-    badge.title = t("badges.otherWindow");
-    el.append(favicon, badge, textContainer);
-  } else {
-    el.append(favicon, textContainer);
+    badge.textContent = t("badges.otherWindow");
+    el.appendChild(badge);
   }
   if (sectionKey === "tabs") {
     const actions = createElement("div", "qal-result-actions");

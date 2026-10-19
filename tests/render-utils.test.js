@@ -18,6 +18,7 @@ const {
   hashCode,
   createInitialFavicon,
   createFavicon,
+  createResultItem,
   createElement,
   createSectionHeader,
   renderEmpty,
@@ -284,5 +285,42 @@ describe("reindexItems", () => {
     expect(items[0].dataset.index).toBe("0");
     expect(items[1].dataset.index).toBe("1");
     expect(items[2].dataset.index).toBe("2");
+  });
+});
+
+describe("createResultItem - badges in words", () => {
+  it("labels a tab from another window with readable text", () => {
+    const el = createResultItem(
+      { id: 1, title: "A", url: "https://a.com", isCurrentWindow: false },
+      "tabs",
+      "",
+      0,
+    );
+    expect(el.querySelector(".qal-window-badge").textContent).toBe(
+      "Altra finestra",
+    );
+  });
+
+  it("labels a content match with readable text", () => {
+    const el = createResultItem(
+      { id: 1, title: "A", url: "https://a.com", isContentMatch: true },
+      "tabs",
+      "",
+      0,
+    );
+    expect(el.querySelector(".qal-content-badge").textContent).toBe(
+      "Nel testo",
+    );
+  });
+
+  it("shows no badge for a tab in the current window", () => {
+    const el = createResultItem(
+      { id: 1, title: "A", url: "https://a.com", isCurrentWindow: true },
+      "tabs",
+      "",
+      0,
+    );
+    expect(el.querySelector(".qal-window-badge")).toBeNull();
+    expect(el.querySelector(".qal-result-text")).not.toBeNull();
   });
 });
