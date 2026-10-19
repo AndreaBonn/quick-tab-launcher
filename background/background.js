@@ -224,7 +224,10 @@ const MESSAGE_ROUTES = {
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (typeof message.action !== "string") return false;
-  if (!Object.hasOwn(MESSAGE_ROUTES, message.action)) return false;
+  // Object.hasOwn needs Firefox 92; the manifest still supports 91.
+  if (!Object.prototype.hasOwnProperty.call(MESSAGE_ROUTES, message.action)) {
+    return false;
+  }
   return MESSAGE_ROUTES[message.action](message, sender, sendResponse);
 });
 

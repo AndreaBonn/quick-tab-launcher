@@ -80,6 +80,25 @@ describe("background message routes", () => {
     expect(sendResponse).not.toHaveBeenCalled();
   });
 
+  it("routes messages without Object.hasOwn (Firefox 91, strict_min_version)", () => {
+    const hasOwn = Object.hasOwn;
+    delete Object.hasOwn;
+    try {
+      const sendResponse = vi.fn();
+      expect(messageListener({ action: "open-options" }, SENDER, sendResponse)).toBe(false);
+      expect(messageListener({ action: "constructor" }, SENDER, sendResponse)).toBe(false);
+      expect(browserMock.runtime.openOptionsPage).toHaveBeenCalledExactlyOnceWith();
+    } finally {
+      Object.hasOwn = hasOwn;
+    }
+  });
+
+  it("ignores a message without an action", () => {
+    const sendResponse = vi.fn();
+    expect(messageListener({}, SENDER, sendResponse)).toBe(false);
+    expect(sendResponse).not.toHaveBeenCalled();
+  });
+
   it.each([
     { action: "unknown-action" },
     { action: "toString" },
