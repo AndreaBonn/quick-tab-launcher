@@ -10,6 +10,7 @@ const state = {
   flatResults: [],
   searchCommands: [],
   searchTimeout: null,
+  searchSeq: 0,
   loadingTimeout: null,
   toastTimeout: null,
   footerMode: "recent",
@@ -206,6 +207,7 @@ function handleInput() {
   clearTimeout(state.loadingTimeout);
   clearPendingConfirm();
   const query = state.elements.input.value;
+  const seq = ++state.searchSeq;
 
   if (!query.trim()) {
     setFooterMode("recent");
@@ -242,6 +244,7 @@ function handleInput() {
         action: "search",
         query,
       });
+      if (seq !== state.searchSeq) return;
       clearTimeout(state.loadingTimeout);
       state.results = results;
       state.searchCommands = matchCommandsForSearch(

@@ -26,7 +26,7 @@ const SEARCH_TABS = () => ({
   history: [],
 });
 
-async function openPopup(replies = {}) {
+async function openPopup(replies = {}, configureBrowser = () => {}) {
   const body = POPUP_HTML.slice(
     POPUP_HTML.indexOf("<body"),
     POPUP_HTML.indexOf("<script"),
@@ -34,6 +34,7 @@ async function openPopup(replies = {}) {
   document.body.className = "qal-popup";
   document.body.innerHTML = body;
   const browserMock = createBrowserMock(replies);
+  configureBrowser(browserMock);
   browserMock.runtime.openOptionsPage = vi.fn();
   globalThis.browser = browserMock;
   for (const modulePath of SCRIPTS.slice(0, -1)) {
@@ -52,12 +53,43 @@ function sent(browserMock) {
   return browserMock.runtime.sendMessage.mock.calls.map(([m]) => m);
 }
 
+async function openRegressionPopup(replies = {}, configureBrowser) {
+  const registrations = vi.spyOn(document, "addEventListener");
+  try {
+    return await openPopup(replies, configureBrowser);
+  } finally {
+    for (const [event, listener] of registrations.mock.calls) {
+      if (event === "DOMContentLoaded") document.removeEventListener(event, listener);
+    }
+    registrations.mockRestore();
+  }
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
   delete globalThis.browser;
 });
 
 describe("popup - same tools as the overlay (N3)", () => {
+  it("keeps the newer search results when the older reply arrives last", async () => {
+    let resolveOlder;
+    let resolveNewer;
+    const older = new Promise((resolve) => { resolveOlder = resolve; });
+    const newer = new Promise((resolve) => { resolveNewer = resolve; });
+    const { input } = await openRegressionPopup({
+      search: ({ query }) => query === "gh" ? older : newer,
+    });
+    await type(input, "gh");
+    await type(input, "so");
+    resolveNewer({ tabs: [SEARCH_TABS().tabs[1]], bookmarks: [], history: [] });
+    await settle();
+    expect(document.querySelector(".qal-results").textContent).toContain("SO");
+    resolveOlder({ tabs: [SEARCH_TABS().tabs[0]], bookmarks: [], history: [] });
+    await settle();
+    expect(document.querySelector(".qal-results").textContent).toContain("SO");
+    expect(document.querySelector(".qal-results").textContent).not.toContain("GH a");
+  });
+
   it("shows the By site and Search text toggles with their labels", async () => {
     await openPopup();
     expect(document.querySelector(".qal-group-toggle").textContent).toBe(
