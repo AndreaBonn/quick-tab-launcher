@@ -697,3 +697,25 @@ describe("web row after closing the last result (R9 review)", () => {
     });
   });
 });
+
+describe("late search reply after close and reopen", () => {
+  it("does not paint stale results over the empty input", async () => {
+    let answer;
+    const { shadowRoot, input, messageListener } = await openWith({
+      search: () => new Promise((resolve) => { answer = resolve; }),
+    });
+    input.value = "git";
+    input.dispatchEvent(new Event("input"));
+    await settle(globalThis.QAL_CONFIG.DEBOUNCE_MS + 60);
+    expect(answer).toBeTypeOf("function");
+
+    messageListener({ action: "toggle" });
+    messageListener({ action: "toggle" });
+    await settle();
+    answer(SEARCH_TABS());
+    await settle();
+
+    expect(shadowRoot.querySelector(".qal-input").value).toBe("");
+    expect(shadowRoot.querySelector(".qal-results").textContent).not.toContain("Pull requests");
+  });
+});

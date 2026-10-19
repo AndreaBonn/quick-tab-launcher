@@ -150,8 +150,7 @@
   function closeLauncher() {
     state.isVisible = false;
     state.elements.overlay.style.display = "none";
-    clearTimeout(state.searchTimeout);
-    clearTimeout(state.loadingTimeout);
+    panelController.cancelPendingSearch();
     state.results = { tabs: [], bookmarks: [], history: [] };
     state.searchCommands = [];
     state.selectedIndex = -1;

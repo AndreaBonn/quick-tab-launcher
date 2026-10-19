@@ -9,7 +9,7 @@ function createPanelController({ state, elements, hooks, logPrefix = "Quick TAB 
     fetchActiveTabState: panelFetchActiveTabState, fetchWebSearchState: panelFetchWebSearchState,
     toggleGroupedView: panelToggleGroupedView, toggleFulltextSearch: panelToggleFulltextSearch,
     refreshCurrentView: panelRefreshCurrentView, retriggerSearch: panelRetriggerSearch,
-    updateToggleStates: panelUpdateToggleStates,
+    updateToggleStates: panelUpdateToggleStates, cancelPendingSearch: panelCancelPendingSearch,
   };
   for (const [name, method] of Object.entries(methods)) controller[name] = method.bind(null, context);
   return controller;
@@ -38,6 +38,12 @@ function panelHandleInput(context) {
   }
   view.setFooterMode("search");
   panelScheduleSearch(context, query, seq);
+}
+
+function panelCancelPendingSearch({ state }) {
+  clearTimeout(state.searchTimeout);
+  clearTimeout(state.loadingTimeout);
+  state.searchSeq += 1;
 }
 
 function panelScheduleSearch(context, query, seq) {
