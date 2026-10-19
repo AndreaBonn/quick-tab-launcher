@@ -33,7 +33,10 @@ function createDomainGroup(group) {
   domainLabel.textContent = group.domain;
   const domainCount = createElement("span", "qal-domain-count");
   domainCount.textContent = group.tabs.length;
-  const closeAllBtn = createElement("button", "qal-domain-close-all");
+  // Mouse-only like the per-row close control: a listbox may own only options
+  // and groups, and keyboard focus never leaves the input anyway.
+  const closeAllBtn = createElement("span", "qal-domain-close-all");
+  closeAllBtn.setAttribute("aria-hidden", "true");
   closeAllBtn.textContent = "\u2715";
   closeAllBtn.title = t("actions.closeDomainTabs", {
     domain: group.domain,

@@ -350,6 +350,22 @@ describe("renderGroupedResults", () => {
     expect(closeBtn.dataset.domain).toBe("test.com");
   });
 
+  it("keeps the listbox free of focusable controls (axe aria-required-children)", () => {
+    const results = {
+      tabs: [{ id: 1, title: "T", url: "https://test.com", favIconUrl: null }],
+      bookmarks: [],
+      history: [],
+    };
+
+    renderGroupedResults(container, results, "", 0);
+
+    const closeAll = container.querySelector(".qal-domain-close-all");
+    expect(closeAll.tagName).toBe("SPAN");
+    expect(closeAll.getAttribute("aria-hidden")).toBe("true");
+    expect(closeAll.title).toContain("test.com");
+    expect(container.querySelectorAll("button, a[href], input, [tabindex]")).toHaveLength(0);
+  });
+
   it("renders bookmarks and history sections normally", () => {
     const results = {
       tabs: [],
