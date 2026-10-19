@@ -10,8 +10,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
-      include: ["src/**/*.js", "background/**/*.js", "content/**/*.js", "options/**/*.js"],
+      include: ["src/**/*.js", "background/**/*.js", "content/**/*.js", "options/**/*.js", "popup/**/*.js", "welcome/**/*.js"],
       exclude: ["tests/**"],
+      thresholds: {
+        statements: 96,
+        branches: 88,
+        functions: 95,
+        lines: 96,
+      },
     },
   },
 });
