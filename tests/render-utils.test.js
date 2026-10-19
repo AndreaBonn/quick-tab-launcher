@@ -14,6 +14,7 @@ globalThis.highlightMatch = highlightMatch;
 globalThis.formatUrl = formatUrl;
 globalThis.t = t;
 
+Object.assign(globalThis, require("../src/render-utils.js"), require("../src/render-states.js"));
 const {
   hashCode,
   createInitialFavicon,
@@ -21,13 +22,15 @@ const {
   createResultItem,
   createElement,
   createSectionHeader,
+  updateSelection,
+  reindexItems,
+} = require("../src/render-utils.js");
+const {
   renderEmpty,
   renderLoading,
   renderError,
   renderNoResults,
-  updateSelection,
-  reindexItems,
-} = require("../src/render-utils.js");
+} = require("../src/render-states.js");
 
 // ---------------------------------------------------------------------------
 // hashCode

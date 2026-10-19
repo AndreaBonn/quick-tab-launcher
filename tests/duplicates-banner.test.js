@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBrowserMock } from "./helpers/load-launcher.js";
 
-for (const file of ["config-storage", "i18n", "icons", "render-utils"]) {
+for (const file of ["config-storage", "i18n", "icons", "render-utils", "render-states", "render-views"]) {
   Object.assign(globalThis, require(`../src/${file}.js`));
 }
 const { createDuplicatesBanner, duplicateSignature } = require("../content/duplicates-banner.js");

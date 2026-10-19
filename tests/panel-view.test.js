@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
-for (const file of ["config-storage", "search-utils", "fuzzy", "i18n", "icons", "hints", "render-utils", "panel-extras"]) {
+for (const file of ["config-storage", "search-utils", "fuzzy", "i18n", "icons", "hints", "render-utils", "render-states", "render-views", "panel-extras"]) {
   Object.assign(globalThis, require(`../src/${file}.js`));
 }
 const { createPanelView, createPanelState, isCommandMode } = require("../src/panel-view.js");

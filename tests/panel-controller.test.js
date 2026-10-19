@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { createBrowserMock } from "./helpers/load-launcher.js";
 
-for (const file of ["config-storage", "search-utils", "fuzzy", "i18n", "icons", "hints", "render-utils", "panel-extras", "commands", "panel-view", "panel-actions"]) {
+for (const file of ["config-storage", "search-utils", "fuzzy", "i18n", "icons", "hints", "render-utils", "render-states", "render-views", "panel-extras", "commands", "panel-view", "panel-actions"]) {
   Object.assign(globalThis, require(`../src/${file}.js`));
 }
 

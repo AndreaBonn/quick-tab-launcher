@@ -27,18 +27,23 @@ const {
   applyTranslations,
 } = require("../src/i18n.js");
 
+Object.assign(globalThis, require("../src/render-utils.js"), require("../src/render-states.js"));
 const {
   createElement,
   createResultItem,
   createSectionHeader,
-  renderResults,
+  updateSelection,
+  reindexItems,
+} = require("../src/render-utils.js");
+const {
   renderEmpty,
   renderNoResults,
   renderLoading,
   renderError,
-  updateSelection,
-  reindexItems,
-} = require("../src/render-utils.js");
+} = require("../src/render-states.js");
+const {
+  renderResults,
+} = require("../src/render-views.js");
 
 /**
  * Creates a minimal browser mock for content script testing.
@@ -113,6 +118,8 @@ async function loadLauncher(browserMock) {
     require("../content/launcher-dom.js"),
     require("../content/duplicates-banner.js"),
     require("../src/render-utils.js"),
+    require("../src/render-states.js"),
+    require("../src/render-views.js"),
     require("../src/commands.js"),
     { tCount: require("../src/i18n.js").tCount },
   );

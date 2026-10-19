@@ -14,12 +14,15 @@ globalThis.formatUrl = formatUrl;
 globalThis.t = t;
 globalThis.createIcon = createIcon;
 
+Object.assign(globalThis, require("../src/render-utils.js"), require("../src/render-states.js"));
 const {
   createResultItem,
   createSectionHeader,
-  renderCommandResults,
   updateSelection,
 } = require("../src/render-utils.js");
+const {
+  renderCommandResults,
+} = require("../src/render-views.js");
 
 beforeEach(() => setLocaleFromStorage("it"));
 

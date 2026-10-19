@@ -33,22 +33,27 @@ const {
 const { COMMANDS, filterCommands, getCommandLabel, getCommandDescription } =
   require("../src/commands.js");
 
+Object.assign(globalThis, require("../src/render-utils.js"), require("../src/render-states.js"));
 const {
   createElement,
   createResultItem,
   createSectionHeader,
+  updateSelection,
+  reindexItems,
+} = require("../src/render-utils.js");
+const {
+  renderEmpty,
+  renderNoResults,
+  renderLoading,
+  renderError,
+} = require("../src/render-states.js");
+const {
   renderResults,
   renderGroupedResults,
   renderCommandResults,
   renderRecentTabs,
   renderDuplicateBanner,
-  renderEmpty,
-  renderNoResults,
-  renderLoading,
-  renderError,
-  updateSelection,
-  reindexItems,
-} = require("../src/render-utils.js");
+} = require("../src/render-views.js");
 
 function createBrowserMock() {
   return {
@@ -127,6 +132,8 @@ async function loadLauncher(browserMock) {
     require("../content/launcher-dom.js"),
     require("../content/duplicates-banner.js"),
     require("../src/render-utils.js"),
+    require("../src/render-states.js"),
+    require("../src/render-views.js"),
     require("../src/commands.js"),
     { tCount: require("../src/i18n.js").tCount },
   );

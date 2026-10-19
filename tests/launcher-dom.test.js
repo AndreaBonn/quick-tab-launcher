@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-for (const file of ["config-storage", "i18n", "icons", "render-utils"]) {
+for (const file of ["config-storage", "i18n", "icons", "render-utils", "render-states", "render-views"]) {
   Object.assign(globalThis, require(`../src/${file}.js`));
 }
 const { createOverlayDOM, translateOverlayDOM } = require("../content/launcher-dom.js");

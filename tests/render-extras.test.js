@@ -23,15 +23,18 @@ globalThis.tCount = tCount;
 
 globalThis.t = t;
 
+Object.assign(globalThis, require("../src/render-utils.js"), require("../src/render-states.js"));
 const {
   fuzzyHighlightOrFallback,
   createResultText,
+} = require("../src/render-utils.js");
+const {
   renderCommandResults,
   renderRecentTabs,
   renderDuplicateBanner,
   renderGroupedResults,
   renderResults,
-} = require("../src/render-utils.js");
+} = require("../src/render-views.js");
 
 describe("fuzzyHighlightOrFallback", () => {
   it("uses fuzzy highlighting when match found", () => {
