@@ -1,12 +1,10 @@
-/* global browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform, isAltShortcut, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, renderSearchView, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
+/* global createPanelState, createPanelView, isCommandMode, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, filterCommands, loadUserConfig, saveUserConfig, createIcon, isAltShortcut, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
 
 (function () {
   "use strict";
 
   const HOST_ELEMENT_ID = "qal-shadow-host";
   const RESULTS_ELEMENT_ID = "qal-results";
-  const IS_MAC = isMacPlatform(navigator.platform);
-  const PANEL_TOAST_MS = 8000;
   const PAGE_TOAST_MS = 6000;
   const DUPLICATES_DISMISSED_KEY = "qal_duplicates_dismissed";
   const QUICK_COMMAND_IDS = [
@@ -19,30 +17,17 @@
   const CLOSABLE_TYPES = ["tab", "recent-active"];
 
   const state = {
+    ...createPanelState(),
     isVisible: false,
-    isGroupedView: false,
-    footerMode: "recent",
-    isHelpExpanded: false,
-    activeTabState: null,
-    webSearchEnabled: false,
-    searchCommands: [],
-    pendingConfirmId: null,
-    panelUndoCount: 0,
     pageUndoCount: 0,
-    isClosingTab: false,
-    searchSeq: 0,
-    panelToastTimeout: null,
     pageToastTimeout: null,
     guideState: null,
     duplicateSignature: "",
-    results: { tabs: [], bookmarks: [], history: [] },
-    selectedIndex: -1,
-    flatResults: [],
-    searchTimeout: null,
-    loadingTimeout: null,
     shadowRoot: null,
     elements: {},
   };
+
+  let panelView;
 
   function init() {
     if (document.getElementById(HOST_ELEMENT_ID)) return;
@@ -156,26 +141,8 @@
       duplicatesSlot,
       pageToastSlot,
     };
+    panelView = createPanelView({ state, elements: state.elements });
     applyOverlayTranslations();
-  }
-
-  function renderFooter() {
-    renderFooterHints(state.elements.footer, {
-      mode: state.footerMode,
-      expanded: state.isHelpExpanded,
-      isMac: IS_MAC,
-    });
-  }
-
-  function setFooterMode(mode) {
-    if (state.footerMode === mode) return;
-    state.footerMode = mode;
-    renderFooter();
-  }
-
-  function toggleHelp() {
-    state.isHelpExpanded = !state.isHelpExpanded;
-    renderFooter();
   }
 
   function applyOverlayTranslations() {
@@ -189,7 +156,7 @@
     fulltextToggle.textContent = t("launcher.fulltextToggle");
     updateGroupToggleState();
     updateFulltextToggleState(fulltextToggle);
-    renderFooter();
+    panelView.renderFooter();
   }
 
   function updateGroupToggleState() {
@@ -264,10 +231,10 @@
     state.flatResults = [];
     state.isHelpExpanded = false;
     state.footerMode = "recent";
-    renderFooter();
+    panelView.renderFooter();
     updateFulltextToggleState(state.elements.fulltextToggle);
-    clearPendingConfirm();
-    hidePanelToast();
+    panelView.clearPendingConfirm();
+    panelView.hidePanelToast();
     renderEmpty(state.elements.results);
     state.elements.quickActions.hidden = false;
     state.elements.duplicatesSlot.replaceChildren();
@@ -296,7 +263,7 @@
     state.selectedIndex = -1;
     state.flatResults = [];
     state.pendingConfirmId = null;
-    hidePanelToast();
+    panelView.hidePanelToast();
   }
 
   async function fetchRecentTabs(preferredIndex = 0) {
@@ -362,7 +329,7 @@
         action: "close-duplicates",
       });
       const closed = result?.closed ?? 0;
-      showPanelToast(tCount("done.close-duplicates", closed), closed);
+      panelView.showPanelToast(tCount("done.close-duplicates", closed), closed);
       refreshCurrentView();
     } catch (err) {
       console.warn("Quick TAB Launcher: closing duplicates failed", err);
@@ -427,7 +394,7 @@
     const target = e.target.closest("[data-qal-action]");
     if (!target) return;
     const action = target.dataset.qalAction;
-    if (action === "toggle-help") toggleHelp();
+    if (action === "toggle-help") panelView.toggleHelp();
     else if (action === "dismiss-guide") hideGuideForGood();
     else if (action === "run-command") runCommand(target.dataset.commandId);
     else if (action === "show-commands") showCommandMode();
@@ -455,19 +422,6 @@
     slot.replaceChildren(buildToast(message, undoCount > 0));
   }
 
-  function showPanelToast(message, undoCount = 0) {
-    clearTimeout(state.panelToastTimeout);
-    state.panelUndoCount = undoCount;
-    showToastIn(state.elements.toastSlot, message, undoCount);
-    state.panelToastTimeout = setTimeout(hidePanelToast, PANEL_TOAST_MS);
-  }
-
-  function hidePanelToast() {
-    clearTimeout(state.panelToastTimeout);
-    state.panelUndoCount = 0;
-    state.elements.toastSlot.replaceChildren();
-  }
-
   function showPageToast(message, undoCount = 0) {
     clearTimeout(state.pageToastTimeout);
     state.pageUndoCount = undoCount;
@@ -488,7 +442,7 @@
 
   async function undoLastClose() {
     const count = state.panelUndoCount;
-    hidePanelToast();
+    panelView.hidePanelToast();
     await requestUndo(count);
     refreshCurrentView();
   }
@@ -531,9 +485,9 @@
       refreshCurrentView(index);
       return;
     }
-    showPanelToast(t("toast.tabClosed", { title: item.title || item.url }), 1);
+    panelView.showPanelToast(t("toast.tabClosed", { title: item.title || item.url }), 1);
     if (item.type === "tab" && itemEl?.isConnected) {
-      removeResultItem(itemEl, item.id);
+      panelView.removeResultItem(itemEl, item.id);
     } else {
       refreshCurrentView(index);
     }
@@ -546,19 +500,11 @@
         domain,
       });
       const closed = result?.closed ?? 0;
-      showPanelToast(tCount("done.close-domain", closed, { domain }), closed);
+      panelView.showPanelToast(tCount("done.close-domain", closed, { domain }), closed);
     } catch (err) {
       console.warn("Quick TAB Launcher: closing site tabs failed", err);
     }
     retriggerSearch();
-  }
-
-  function clearPendingConfirm() {
-    state.pendingConfirmId = null;
-    state.elements.results.querySelector(".qal-confirm")?.remove();
-    state.elements.results
-      .querySelector(".qal-has-confirm")
-      ?.classList.remove("qal-has-confirm");
   }
 
   async function requestConfirm(item) {
@@ -580,7 +526,7 @@
       showPageToast(t("done.nothing"));
       return;
     }
-    clearPendingConfirm();
+    panelView.clearPendingConfirm();
     state.pendingConfirmId = item.id;
     const row = state.elements.results.querySelector(
       `.qal-result-item[data-index="${state.selectedIndex}"]`,
@@ -612,21 +558,17 @@
     showPageToast(outcomeMessage(commandId, result), result?.closed ?? 0);
   }
 
-  function isCommandMode(query) {
-    return query.trimStart().startsWith(">");
-  }
-
   function handleInput() {
     clearTimeout(state.searchTimeout);
     clearTimeout(state.loadingTimeout);
     const query = state.elements.input.value;
     const seq = ++state.searchSeq;
-    clearPendingConfirm();
+    panelView.clearPendingConfirm();
     state.elements.quickActions.hidden = Boolean(query.trim());
     state.elements.duplicatesSlot.hidden = Boolean(query.trim());
 
     if (!query.trim()) {
-      setFooterMode("recent");
+      panelView.setFooterMode("recent");
       renderEmpty(state.elements.results);
       state.flatResults = [];
       state.selectedIndex = -1;
@@ -635,11 +577,11 @@
     }
 
     if (isCommandMode(query)) {
-      setFooterMode("commands");
+      panelView.setFooterMode("commands");
       handleCommandInput(query.trimStart().slice(1));
       return;
     }
-    setFooterMode("search");
+    panelView.setFooterMode("search");
 
     state.loadingTimeout = setTimeout(() => {
       renderLoading(state.elements.results);
@@ -659,9 +601,9 @@
           query,
           state.activeTabState,
         );
-        rebuildFlatResults();
+        panelView.rebuildFlatResults();
         state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
-        renderCurrentView(query);
+        panelView.renderCurrentView(query);
       } catch (err) {
         clearTimeout(state.loadingTimeout);
         console.error("Quick TAB Launcher: search error", err);
@@ -682,41 +624,13 @@
     );
   }
 
-  // Flat list in on-screen order: results first, matching actions last (R7).
-  function rebuildFlatResults() {
-    state.flatResults = [
-      ...buildFlatResults(state.results, { grouped: state.isGroupedView }),
-      ...state.searchCommands.map((cmd) => ({ ...cmd, type: "command" })),
-    ];
-    // Nothing matched: the web search row is the only result (R9).
-    const query = state.elements.input.value.trim();
-    if (state.flatResults.length === 0 && state.webSearchEnabled && query) {
-      state.flatResults = [{ type: "web-search", query }];
-    }
-  }
-
-  function renderCurrentView(query) {
-    renderSearchView(state.elements.results, {
-      results: state.results,
-      commands: state.searchCommands,
-      query,
-      selectedIndex: state.selectedIndex,
-      grouped: state.isGroupedView,
-      tips: {
-        fulltextEnabled: QAL_CONFIG.ENABLE_FULLTEXT_SEARCH,
-        historyDays: QAL_CONFIG.HISTORY_DAYS,
-        webSearchEnabled: state.webSearchEnabled,
-      },
-    });
-  }
-
   function toggleGroupedView() {
     state.isGroupedView = !state.isGroupedView;
     updateGroupToggleState();
     const query = state.elements.input.value;
     if (query.trim() && !isCommandMode(query)) {
-      rebuildFlatResults();
-      renderCurrentView(query);
+      panelView.rebuildFlatResults();
+      panelView.renderCurrentView(query);
     }
   }
 
@@ -735,7 +649,7 @@
 
     if (e.key === "?" && !state.elements.input.value) {
       e.preventDefault();
-      toggleHelp();
+      panelView.toggleHelp();
       return;
     }
 
@@ -753,7 +667,7 @@
 
     if (e.key === "Escape" && state.pendingConfirmId) {
       e.preventDefault();
-      clearPendingConfirm();
+      panelView.clearPendingConfirm();
       return;
     }
 
@@ -762,12 +676,12 @@
       case "Tab":
         if (!e.shiftKey) {
           e.preventDefault();
-          selectNext();
+          panelView.selectNext();
         }
         break;
       case "ArrowUp":
         e.preventDefault();
-        selectPrev();
+        panelView.selectPrev();
         break;
       case "Enter":
         e.preventDefault();
@@ -781,23 +695,6 @@
         closeLauncher();
         break;
     }
-  }
-
-  function selectNext() {
-    if (state.flatResults.length === 0) return;
-    clearPendingConfirm();
-    state.selectedIndex = (state.selectedIndex + 1) % state.flatResults.length;
-    updateSelection(state.elements.results, state.selectedIndex);
-  }
-
-  function selectPrev() {
-    if (state.flatResults.length === 0) return;
-    clearPendingConfirm();
-    state.selectedIndex =
-      state.selectedIndex <= 0
-        ? state.flatResults.length - 1
-        : state.selectedIndex - 1;
-    updateSelection(state.elements.results, state.selectedIndex);
   }
 
   function navigateTo(item, forceNewTab) {
@@ -881,40 +778,6 @@
     if (index >= 0 && index < state.flatResults.length) {
       navigateTo(state.flatResults[index], e.ctrlKey || e.metaKey);
     }
-  }
-
-  function removeResultItem(itemEl, tabId) {
-    state.results.tabs = state.results.tabs.filter((tab) => tab.id !== tabId);
-    rebuildFlatResults();
-    // Last result gone: re-render so what Enter runs (web row or nothing)
-    // is what the list shows.
-    if (state.flatResults.every((item) => item.type === "web-search")) {
-      state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
-      renderCurrentView(state.elements.input.value);
-      return;
-    }
-
-    itemEl.remove();
-
-    const tabSection = state.elements.results.querySelector(
-      '.qal-section[data-section="tabs"]',
-    );
-    if (tabSection) {
-      const remainingItems = tabSection.querySelectorAll(".qal-result-item");
-      if (remainingItems.length === 0) {
-        tabSection.remove();
-      } else {
-        const countEl = tabSection.querySelector(".qal-section-count");
-        if (countEl) countEl.textContent = remainingItems.length;
-      }
-    }
-
-    reindexItems(state.elements.results);
-
-    if (state.selectedIndex >= state.flatResults.length) {
-      state.selectedIndex = state.flatResults.length - 1;
-    }
-    updateSelection(state.elements.results, state.selectedIndex);
   }
 
   async function loadConfig() {

@@ -83,6 +83,30 @@ describe.each(POINTS)("%s loading contract", (point) => {
 });
 
 describe("loading contract diagnostics", () => {
+  it("loads the shared panel view from the content manifest before the launcher", () => {
+    const dom = loadWindow("content");
+    try {
+      for (const { file, source } of sourcesFor("content").slice(0, -1)) {
+        vm.runInContext(source, dom.getInternalVMContext(), { filename: file });
+      }
+      const state = dom.window.eval("createPanelState()");
+      const elements = {
+        input: dom.window.document.createElement("input"),
+        results: dom.window.document.createElement("div"),
+      };
+      elements.input.value = "example";
+      state.webSearchEnabled = true;
+      const view = dom.window.eval("createPanelView")({ state, elements });
+      view.rebuildFlatResults();
+      view.renderCurrentView(elements.input.value);
+      view.selectNext();
+      expect(state.flatResults).toEqual([{ type: "web-search", query: "example" }]);
+      expect(elements.results.querySelector('[data-type="web-search"]').getAttribute("aria-selected")).toBe("true");
+    } finally {
+      dom.window.close();
+    }
+  });
+
   it("rejects a missing provider and accepts the same consumer after its provider", () => {
     const dom = new JSDOM();
     const provider = { file: "provider.js", source: "const sharedValue = 42;" };

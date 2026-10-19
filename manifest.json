@@ -58,6 +58,7 @@
         "src/render-utils.js",
         "src/panel-extras.js",
         "src/onboarding.js",
+        "src/panel-view.js",
         "content/launcher.js"
       ],
       "run_at": "document_end"
