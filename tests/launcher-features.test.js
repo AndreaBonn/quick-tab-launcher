@@ -636,3 +636,42 @@ describe("launcher.js - panel chrome", () => {
     expect(icon.textContent).toBe("");
   });
 });
+
+describe("launcher.js - grouped view opens the highlighted row", () => {
+  it("Enter on the second on-screen row opens that tab, not the second search hit", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const browserMock = createBrowserMock();
+    browserMock.runtime.sendMessage.mockImplementation((msg) => {
+      if (msg.action === "search") {
+        return Promise.resolve({
+          tabs: [
+            { id: 1, title: "GH a", url: "https://github.com/a" },
+            { id: 2, title: "SO", url: "https://stackoverflow.com/q" },
+            { id: 3, title: "GH b", url: "https://github.com/b" },
+          ],
+          bookmarks: [],
+          history: [],
+        });
+      }
+      return Promise.resolve({ recentActive: [], recentlyClosed: [] });
+    });
+    const { shadowRoot, messageListener } = await loadLauncher(browserMock);
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "g", altKey: true, code: "KeyG" }),
+    );
+    await typeAndFlush(input, "x");
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+    const rows = shadowRoot.querySelectorAll(".qal-result-item");
+    expect(rows[1].querySelector(".qal-result-title").textContent).toBe("GH b");
+    expect(browserMock.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "navigate", tabId: 3 }),
+    );
+    document.getElementById("qal-shadow-host")?.remove();
+    delete globalThis.browser;
+  });
+});

@@ -82,9 +82,20 @@ function normalizeUrl(url) {
   }
 }
 
-function buildFlatResults(results) {
+/**
+ * Flattens results in the order rows appear on screen, so a row index points
+ * at the item Enter or a click must open.
+ *
+ * @param {object} results - { tabs, bookmarks, history }.
+ * @param {{grouped?: boolean}} [options] - grouped: tabs are shown by site.
+ * @returns {Array<object>}
+ */
+function buildFlatResults(results, { grouped = false } = {}) {
   const flat = [];
-  for (const tab of results.tabs) {
+  const tabs = grouped
+    ? groupTabsByDomain(results.tabs).flatMap((group) => group.tabs)
+    : results.tabs;
+  for (const tab of tabs) {
     flat.push({ ...tab, type: "tab" });
   }
   for (const bm of results.bookmarks) {

@@ -302,7 +302,9 @@
         });
         clearTimeout(state.loadingTimeout);
         state.results = results;
-        state.flatResults = buildFlatResults(results);
+        state.flatResults = buildFlatResults(results, {
+          grouped: state.isGroupedView,
+        });
         state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
         renderCurrentView(query);
       } catch (err) {
@@ -348,6 +350,9 @@
     updateGroupToggleState();
     const query = state.elements.input.value;
     if (query.trim() && !isCommandMode(query)) {
+      state.flatResults = buildFlatResults(state.results, {
+        grouped: state.isGroupedView,
+      });
       renderCurrentView(query);
     }
   }
@@ -489,7 +494,9 @@
 
   function removeResultItem(itemEl, tabId) {
     state.results.tabs = state.results.tabs.filter((tab) => tab.id !== tabId);
-    state.flatResults = buildFlatResults(state.results);
+    state.flatResults = buildFlatResults(state.results, {
+      grouped: state.isGroupedView,
+    });
 
     itemEl.remove();
 

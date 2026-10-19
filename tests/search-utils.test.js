@@ -261,3 +261,25 @@ describe("buildFlatResults", () => {
     expect(flat.map((r) => r.type)).toEqual(["tab", "bookmark", "history"]);
   });
 });
+
+describe("buildFlatResults - grouped view order", () => {
+  const results = {
+    tabs: [
+      { id: 1, url: "https://github.com/a" },
+      { id: 2, url: "https://stackoverflow.com/q" },
+      { id: 3, url: "https://github.com/b" },
+    ],
+    bookmarks: [{ id: "b", url: "https://b.com" }],
+    history: [],
+  };
+
+  it("follows the on-screen order of tabs grouped by site", () => {
+    const flat = buildFlatResults(results, { grouped: true });
+    expect(flat.map((r) => r.id)).toEqual([1, 3, 2, "b"]);
+  });
+
+  it("keeps search order when not grouped", () => {
+    const flat = buildFlatResults(results);
+    expect(flat.map((r) => r.id)).toEqual([1, 2, 3, "b"]);
+  });
+});
