@@ -190,6 +190,7 @@ const I18N_MESSAGES = {
       "Apri il menu Estensioni (l'icona a forma di puzzle nella barra), poi l'ingranaggio accanto a Quick Tab Launcher, e fissala alla barra degli strumenti.",
     "welcome.changeShortcut": "Cambia la scorciatoia",
     "welcome.openSettings": "Impostazioni",
+    "options.howTo": "Come si usa",
   },
   en: {
     "launcher.placeholder": "Search tabs, bookmarks, history, or > actions",
@@ -368,6 +369,7 @@ const I18N_MESSAGES = {
       "Open the Extensions menu (the puzzle icon in the toolbar), then the gear next to Quick Tab Launcher, and pin it to the toolbar.",
     "welcome.changeShortcut": "Change the shortcut",
     "welcome.openSettings": "Settings",
+    "options.howTo": "How to use it",
   },
 };
 

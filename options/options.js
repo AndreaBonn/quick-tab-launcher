@@ -1,6 +1,7 @@
 /* global browser, QAL_CONFIG_DEFAULTS, CONFIG_STORAGE_KEY, mergeWithDefaults, t, loadLocale, setLocale, clearLocale, getLocalePreference, applyTranslations, onLocaleChange, buildShortcut, shortcutToKeys */
 
 const TOGGLE_COMMAND = "toggle-launcher";
+const WELCOME_PAGE = "welcome/welcome.html";
 const AUTOSAVE_DELAY_MS = 400;
 const IS_MAC = /mac/i.test(navigator.platform || "");
 
@@ -283,6 +284,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyTranslations(document);
   setupLocaleSelect();
   setupShortcut();
+  document.getElementById("qal-open-welcome")?.addEventListener("click", () => {
+    browser.tabs.create({ url: browser.runtime.getURL(WELCOME_PAGE) });
+  });
   loadSettings();
 
   const form = document.getElementById("qal-options-form");

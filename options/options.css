@@ -396,3 +396,21 @@ body {
 .qal-options-footer a {
   color: var(--qal-accent);
 }
+
+.qal-options-btn--inline-link {
+  font: inherit;
+  color: var(--qal-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.qal-options-btn--inline-link:hover {
+  text-decoration: underline;
+}
+
+.qal-options-btn--inline-link:focus-visible {
+  outline: 2px solid var(--qal-accent);
+  outline-offset: 2px;
+}

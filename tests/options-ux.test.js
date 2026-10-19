@@ -12,7 +12,11 @@ function createBrowserMock({ shortcut = "Ctrl+Shift+Space", locale } = {}) {
   return {
     store,
     i18n: { getUILanguage: () => "it-IT" },
-    runtime: { sendMessage: vi.fn().mockResolvedValue(undefined) },
+    runtime: {
+      sendMessage: vi.fn().mockResolvedValue(undefined),
+      getURL: vi.fn((p) => `moz-extension://id/${p}`),
+    },
+    tabs: { create: vi.fn().mockResolvedValue({}) },
     commands: {
       getAll: vi
         .fn()
@@ -225,5 +229,17 @@ describe("review fixes - options (#11)", () => {
     document.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
     expect(browserMock.commands.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("how-to link (O6)", () => {
+  it("reopens the welcome page from the settings", async () => {
+    const browserMock = await openOptions();
+    const link = $("#qal-open-welcome");
+    expect(link.textContent).toBe("Come si usa");
+    link.click();
+    expect(browserMock.tabs.create).toHaveBeenCalledWith({
+      url: "moz-extension://id/welcome/welcome.html",
+    });
   });
 });
