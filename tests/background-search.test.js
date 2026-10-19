@@ -116,7 +116,7 @@ describe("background.js - search handler", () => {
     );
 
     await vi.waitFor(() =>
-      expect(sendResponse).toHaveBeenCalledWith(({ tabs: manyTabs.slice(0, QAL_CONFIG.MAX_TAB_RESULTS).map((tab) => ({ ...tab, favIconUrl: null, windowId: undefined, isCurrentWindow: true })), bookmarks: [], history: [] })),
+      expect(sendResponse).toHaveBeenCalledWith({ tabs: manyTabs.slice(0, QAL_CONFIG.MAX_TAB_RESULTS).map((tab) => ({ ...tab, favIconUrl: null, windowId: undefined, isCurrentWindow: true })), bookmarks: [], history: [] }),
     );
     expect(sendResponse.mock.calls[0][0].tabs).toHaveLength(
       QAL_CONFIG.MAX_TAB_RESULTS,
@@ -197,7 +197,7 @@ describe("background.js - search handler", () => {
     );
 
     await vi.waitFor(() =>
-      expect(sendResponse).toHaveBeenCalledWith(({ tabs: [], bookmarks: [], history: [{ id: "h1", title: "History Item", url: "https://hist.com", visitCount: 5, lastVisitTime: 1700000000000 }] })),
+      expect(sendResponse).toHaveBeenCalledWith({ tabs: [], bookmarks: [], history: [{ id: "h1", title: "History Item", url: "https://hist.com", visitCount: 5, lastVisitTime: 1700000000000 }] }),
     );
 
     const historyCall = browserMock.history.search.mock.calls[0][0];
@@ -861,7 +861,7 @@ describe("background.js - searchTabs skips executeScript when primaryResults ful
     );
 
     await vi.waitFor(() =>
-      expect(sendResponse).toHaveBeenCalledWith(({ tabs: manyTabs.map((tab) => ({ ...tab, favIconUrl: null, isCurrentWindow: true })), bookmarks: [], history: [] })),
+      expect(sendResponse).toHaveBeenCalledWith({ tabs: manyTabs.map((tab) => ({ ...tab, favIconUrl: null, isCurrentWindow: true })), bookmarks: [], history: [] }),
     );
     expect(browserMock.tabs.executeScript).not.toHaveBeenCalled();
   });
