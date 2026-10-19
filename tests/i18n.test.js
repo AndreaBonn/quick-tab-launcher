@@ -109,9 +109,11 @@ describe("i18n - loadLocale()", () => {
 });
 
 describe("i18n - automatic language (L1, O3)", () => {
-  const { resolveLocale, clearLocale, getLocalePreference } = require(
-    "../src/i18n.js",
-  );
+  const {
+    resolveLocale,
+    clearLocale,
+    getLocalePreference,
+  } = require("../src/i18n.js");
 
   it("resolveLocale prefers a valid stored choice", () => {
     expect(resolveLocale("en", "it-IT")).toBe("en");
@@ -297,5 +299,14 @@ describe("i18n - constants", () => {
 
   it("supports it and en", () => {
     expect(I18N_SUPPORTED_LOCALES).toEqual(["it", "en"]);
+  });
+});
+
+describe("i18n - interpolation keeps values literal", () => {
+  it("does not expand $& or $1 found in a tab title", () => {
+    setLocaleFromStorage("en");
+    expect(t("toast.tabClosed", { title: "Price $& $1 $'" })).toBe(
+      "Tab closed: Price $& $1 $'",
+    );
   });
 });

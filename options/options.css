@@ -42,7 +42,6 @@ body {
   font-family: var(--qal-font);
   font-size: 14px;
   line-height: 1.5;
-  min-width: 480px;
 }
 
 .qal-options-container {
@@ -57,6 +56,8 @@ body {
 
 .qal-options-header-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: flex-start;
 }

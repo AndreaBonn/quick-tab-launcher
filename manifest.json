@@ -41,7 +41,7 @@
       "background/tab-commands.js",
       "background/background.js"
     ],
-    "persistent": false
+    "persistent": true
   },
   "content_scripts": [
     {

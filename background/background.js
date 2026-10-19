@@ -123,6 +123,13 @@ browser.tabs.onActivated.addListener((activeInfo) => {
   updatePopupForTab(activeInfo.tabId);
 });
 
+// The privileged-page flag follows the active tab of the focused window.
+browser.windows.onFocusChanged.addListener(async (windowId) => {
+  if (windowId === browser.windows.WINDOW_ID_NONE) return;
+  const [activeTab] = await browser.tabs.query({ active: true, windowId });
+  if (activeTab?.id) updatePopupForTab(activeTab.id);
+});
+
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (!changeInfo.url) return;
   const [activeTab] = await browser.tabs.query({
@@ -153,7 +160,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "close-tab") {
-    handleCloseTab(message.tabId).then(() => sendResponse({ closed: 1 }));
+    handleCloseTab(message.tabId).then((ok) =>
+      sendResponse({ closed: ok ? 1 : 0 }),
+    );
     return true;
   }
 
@@ -383,8 +392,10 @@ async function handleNavigate(message, senderTabId) {
 async function handleCloseTab(tabId) {
   try {
     await browser.tabs.remove(tabId);
+    return true;
   } catch (err) {
     console.log("Quick TAB Launcher: chiusura tab fallita", err.message);
+    return false;
   }
 }
 

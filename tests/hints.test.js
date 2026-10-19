@@ -137,3 +137,38 @@ describe("createIcon", () => {
     expect(createIcon("does-not-exist")).toBeNull();
   });
 });
+
+describe("isAltShortcut", () => {
+  const { isAltShortcut } = require("../src/hints.js");
+  const ev = (props) => ({
+    key: "",
+    code: "",
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    ...props,
+  });
+
+  it("matches Alt plus the physical letter, whatever character it types", () => {
+    expect(
+      isAltShortcut(ev({ altKey: true, code: "KeyG", key: "©" }), "g"),
+    ).toBe(true);
+    expect(isAltShortcut(ev({ altKey: true, key: "g" }), "g")).toBe(true);
+  });
+
+  it("leaves AltGr (Ctrl+Alt) to the keyboard layout", () => {
+    expect(
+      isAltShortcut(
+        ev({ altKey: true, ctrlKey: true, code: "KeyZ", key: "ż" }),
+        "z",
+      ),
+    ).toBe(false);
+  });
+
+  it("ignores other letters and plain keys", () => {
+    expect(
+      isAltShortcut(ev({ altKey: true, code: "KeyH", key: "h" }), "g"),
+    ).toBe(false);
+    expect(isAltShortcut(ev({ code: "KeyG", key: "g" }), "g")).toBe(false);
+  });
+});

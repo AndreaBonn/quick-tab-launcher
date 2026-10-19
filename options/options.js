@@ -68,7 +68,9 @@ function readFormValues() {
     if (field.type === "checkbox") {
       values[field.configKey] = input.checked;
     } else {
-      values[field.configKey] = Number(input.value);
+      // An emptied field reads as NaN, not 0, so validation rejects it.
+      const raw = input.value.trim();
+      values[field.configKey] = raw === "" ? NaN : Number(raw);
     }
   }
   return values;
@@ -238,9 +240,14 @@ async function resetShortcut() {
 }
 
 function setupShortcut() {
-  document
-    .getElementById("qal-shortcut-change")
-    ?.addEventListener("click", startCapture);
+  const changeBtn = document.getElementById("qal-shortcut-change");
+  changeBtn?.addEventListener("click", startCapture);
+  // Leaving the button ends recording, so other fields get their keys back.
+  changeBtn?.addEventListener("blur", () => {
+    if (!isCapturingShortcut) return;
+    stopCapture();
+    setShortcutStatus("");
+  });
   document
     .getElementById("qal-shortcut-reset")
     ?.addEventListener("click", resetShortcut);

@@ -62,6 +62,8 @@ function createBrowserMock() {
     },
     windows: {
       update: vi.fn().mockResolvedValue({}),
+      onFocusChanged: { addListener: vi.fn() },
+      WINDOW_ID_NONE: -1,
     },
   };
 }
@@ -778,6 +780,19 @@ describe("background.js - close-tab handler", () => {
     expect(browserMock.tabs.remove).toHaveBeenCalledWith(99);
   });
 
+  it("answers closed: 0 when Firefox refuses to close the tab", async () => {
+    browserMock.tabs.remove.mockRejectedValue(new Error("Tab not found"));
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "close-tab", tabId: 99 },
+      { tab: { id: 10 } },
+      sendResponse,
+    );
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({ closed: 0 }),
+    );
+  });
+
   it("answers once the tab is closed, so the panel can offer undo", async () => {
     const sendResponse = vi.fn();
     const result = messageListener(
@@ -1344,5 +1359,36 @@ describe("background.js - panel messages", () => {
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
     expect(globalThis.getRecentTabs).toHaveBeenCalledWith(8);
     delete globalThis.getRecentTabs;
+  });
+});
+
+describe("background.js - focus changes refresh the privileged flag (#2)", () => {
+  it("re-reads the active tab of the newly focused window", async () => {
+    const browserMock = createBrowserMock();
+    loadBackground(browserMock);
+    const onFocus =
+      browserMock.windows.onFocusChanged.addListener.mock.calls[0][0];
+    browserMock.tabs.query.mockResolvedValue([{ id: 9 }]);
+    browserMock.tabs.get.mockResolvedValue({ id: 9, url: "about:newtab" });
+
+    await onFocus(3);
+    await vi.waitFor(() =>
+      expect(browserMock.browserAction.setPopup).toHaveBeenCalledWith({
+        popup: "popup/popup.html",
+      }),
+    );
+    expect(browserMock.tabs.query).toHaveBeenCalledWith({
+      active: true,
+      windowId: 3,
+    });
+  });
+
+  it("ignores focus leaving all Firefox windows", async () => {
+    const browserMock = createBrowserMock();
+    loadBackground(browserMock);
+    const onFocus =
+      browserMock.windows.onFocusChanged.addListener.mock.calls[0][0];
+    await onFocus(-1);
+    expect(browserMock.tabs.query).not.toHaveBeenCalled();
   });
 });

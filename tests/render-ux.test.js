@@ -100,11 +100,14 @@ describe("icons (S1)", () => {
     expect(icon.textContent).toBe("");
   });
 
-  it("close buttons have an accessible name", () => {
+  it("the close control is a mouse shortcut that does not nest a control in the option", () => {
     const el = createResultItem({ id: 1, url: "https://a.com" }, "tabs", "", 0);
-    const btn = el.querySelector(".qal-close-tab");
-    expect(btn.getAttribute("aria-label")).toBe(t("badges.closeTab"));
-    expect(btn.querySelector("svg")).not.toBeNull();
+    const close = el.querySelector(".qal-close-tab");
+    expect(close.tagName).toBe("SPAN");
+    expect(close.getAttribute("aria-hidden")).toBe("true");
+    expect(close.title).toBe(t("badges.closeTab"));
+    expect(close.querySelector("svg")).not.toBeNull();
+    expect(el.querySelector("button")).toBeNull();
   });
 });
 

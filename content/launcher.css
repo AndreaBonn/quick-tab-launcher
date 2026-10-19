@@ -22,6 +22,7 @@
   --qal-text-secondary: #57606a;
   --qal-accent: #0969da;
   --qal-on-accent: #ffffff;
+  --qal-accent-text: #0550ae;
   --qal-hover: #f3f4f6;
   --qal-selected: #dbeafe;
   --qal-selected-border: #0969da;
@@ -49,9 +50,10 @@
     --qal-bg-panel: #282b33;
     --qal-border: #3d4147;
     --qal-text-primary: #e6edf3;
-    --qal-text-secondary: #8b949e;
+    --qal-text-secondary: #a3acb7;
     --qal-accent: #58a6ff;
     --qal-on-accent: #0d1117;
+    --qal-accent-text: #79b8ff;
     --qal-hover: #2d3139;
     --qal-selected: #1d3454;
     --qal-selected-border: #58a6ff;
@@ -223,7 +225,7 @@
   display: none;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--qal-accent);
+  color: var(--qal-accent-text);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -280,12 +282,11 @@
 
 .qal-url-domain {
   color: var(--qal-text-primary);
-  opacity: 0.85;
 }
 
 .qal-highlight {
   background: none;
-  color: var(--qal-accent);
+  color: var(--qal-accent-text);
   font-weight: 700;
   text-decoration: underline;
   text-decoration-thickness: 1px;
@@ -328,7 +329,7 @@
 }
 
 .qal-close-tab:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--qal-hover);
   color: var(--qal-text-primary);
 }
 
@@ -476,7 +477,7 @@ button.qal-hint:hover {
 
 .qal-duplicate-action:hover {
   background: var(--qal-warning);
-  color: #fff;
+  color: var(--qal-warning-bg);
 }
 
 /* --- Domain grouping --- */
@@ -535,7 +536,7 @@ button.qal-hint:hover {
 }
 
 .qal-domain-close-all:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--qal-hover);
   color: var(--qal-text-primary);
 }
 
@@ -634,7 +635,8 @@ button.qal-hint:hover {
   padding: 10px 12px;
   font-size: 12.5px;
   color: var(--qal-text-secondary);
-  background: var(--qal-selected);
+  background: var(--qal-bg-panel);
+  border: 1px solid var(--qal-border);
   border-radius: 8px;
 }
 
@@ -649,7 +651,7 @@ button.qal-hint:hover {
 
 .qal-link-btn {
   font: 600 12.5px/1.3 var(--qal-font);
-  color: var(--qal-accent);
+  color: var(--qal-accent-text);
   background: none;
   border: none;
   padding: 0;
@@ -728,8 +730,13 @@ button.qal-hint:hover {
 
 /* --- Confirmation before closing several tabs (C1) --- */
 
+.qal-result-item.qal-has-confirm {
+  flex-wrap: wrap;
+}
+
 .qal-confirm {
-  margin: 0 16px 6px 50px;
+  flex-basis: 100%;
+  margin: 6px 0 0 34px;
   padding: 6px 10px;
   font-size: 12px;
   color: var(--qal-danger);

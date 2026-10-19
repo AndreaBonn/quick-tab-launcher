@@ -51,6 +51,26 @@ function createEnterHint(kind) {
   return hint;
 }
 
+// The results container is a listbox only while it holds options; empty,
+// loading and error messages are announced as a status instead.
+function setResultsRole(container, role) {
+  container.setAttribute("role", role);
+  if (role !== "listbox") {
+    container.activeDescendantOwner?.removeAttribute("aria-activedescendant");
+  }
+}
+
+function createSection(sectionKey, count) {
+  const section = createElement("div", "qal-section");
+  section.dataset.section = sectionKey;
+  section.setAttribute("role", "group");
+  const header = createSectionHeader(sectionKey, count);
+  header.id = `qal-section-${sectionKey}`;
+  section.setAttribute("aria-labelledby", header.id);
+  section.appendChild(header);
+  return section;
+}
+
 function createSectionHeader(sectionKey, count) {
   const header = createElement("div", "qal-section-header");
   const icon = createElement("span", "qal-section-icon");
@@ -90,6 +110,7 @@ function createFavicon(item, sectionKey) {
   if (hasFavIcon && /^https?:/.test(item.favIconUrl)) {
     const img = document.createElement("img");
     img.className = "qal-favicon";
+    img.alt = "";
     img.width = 16;
     img.height = 16;
     img.src = item.favIconUrl;
@@ -160,12 +181,13 @@ function createResultItem(item, sectionKey, query, index) {
   if (ENTER_HINT_KEYS[sectionKey]) el.appendChild(createEnterHint(sectionKey));
   if (sectionKey === "tabs" || sectionKey === "recent-active") {
     const actions = createElement("div", "qal-result-actions");
-    const closeBtn = createElement("button", "qal-close-tab");
-    closeBtn.type = "button";
+    // Not a <button>: controls cannot sit inside an option. Mouse users click
+    // it, keyboard and screen reader users close the selected row with Alt+W.
+    const closeBtn = createElement("span", "qal-close-tab");
     appendIcon(closeBtn, "close");
     if (!closeBtn.firstChild) closeBtn.textContent = "\u2715";
     closeBtn.title = t("badges.closeTab");
-    closeBtn.setAttribute("aria-label", t("badges.closeTab"));
+    closeBtn.setAttribute("aria-hidden", "true");
     actions.appendChild(closeBtn);
     el.appendChild(actions);
   }
@@ -174,6 +196,7 @@ function createResultItem(item, sectionKey, query, index) {
 
 function renderResults(container, results, query, selectedIndex) {
   container.innerHTML = "";
+  setResultsRole(container, "listbox");
   const totalCount =
     results.tabs.length + results.bookmarks.length + results.history.length;
   if (totalCount === 0) {
@@ -184,9 +207,7 @@ function renderResults(container, results, query, selectedIndex) {
   for (const sectionKey of SECTION_KEYS) {
     const items = results[sectionKey];
     if (items.length === 0) continue;
-    const section = createElement("div", "qal-section");
-    section.dataset.section = sectionKey;
-    section.appendChild(createSectionHeader(sectionKey, items.length));
+    const section = createSection(sectionKey, items.length);
     for (const item of items) {
       section.appendChild(
         createResultItem(item, sectionKey, query, globalIndex),
@@ -200,6 +221,7 @@ function renderResults(container, results, query, selectedIndex) {
 
 function renderGroupedResults(container, results, query, selectedIndex) {
   container.innerHTML = "";
+  setResultsRole(container, "listbox");
   const totalCount =
     results.tabs.length + results.bookmarks.length + results.history.length;
   if (totalCount === 0) {
@@ -211,9 +233,7 @@ function renderGroupedResults(container, results, query, selectedIndex) {
 
   if (results.tabs.length > 0) {
     const groups = groupTabsByDomain(results.tabs);
-    const section = createElement("div", "qal-section");
-    section.dataset.section = "tabs";
-    section.appendChild(createSectionHeader("tabs", results.tabs.length));
+    const section = createSection("tabs", results.tabs.length);
 
     for (const group of groups) {
       const domainGroup = createElement("div", "qal-domain-group");
@@ -246,9 +266,7 @@ function renderGroupedResults(container, results, query, selectedIndex) {
   for (const sectionKey of ["bookmarks", "history"]) {
     const items = results[sectionKey];
     if (items.length === 0) continue;
-    const section = createElement("div", "qal-section");
-    section.dataset.section = sectionKey;
-    section.appendChild(createSectionHeader(sectionKey, items.length));
+    const section = createSection(sectionKey, items.length);
     for (const item of items) {
       section.appendChild(
         createResultItem(item, sectionKey, query, globalIndex),
@@ -299,9 +317,7 @@ function appendCommandSection(
   startIndex,
   sectionKey = "commands",
 ) {
-  const section = createElement("div", "qal-section");
-  section.dataset.section = sectionKey;
-  section.appendChild(createSectionHeader(sectionKey, commands.length));
+  const section = createSection(sectionKey, commands.length);
   commands.forEach((cmd, i) => {
     section.appendChild(createCommandItem(cmd, startIndex + i));
   });
@@ -326,6 +342,7 @@ function renderSearchView(container, view) {
   const render = grouped ? renderGroupedResults : renderResults;
   if (total > 0) render(container, results, query, selectedIndex);
   else container.textContent = "";
+  setResultsRole(container, "listbox");
   if (commands.length > 0) {
     appendCommandSection(container, commands, total);
     updateSelection(container, selectedIndex);
@@ -334,6 +351,7 @@ function renderSearchView(container, view) {
 
 function renderCommandResults(container, commands, query, selectedIndex) {
   container.innerHTML = "";
+  setResultsRole(container, "listbox");
   if (commands.length === 0) {
     renderNoResults(container, query || ">");
     return;
@@ -358,6 +376,7 @@ function renderCommandResults(container, commands, query, selectedIndex) {
 
 function renderRecentTabs(container, recentData) {
   container.innerHTML = "";
+  setResultsRole(container, "listbox");
   const { recentActive, recentlyClosed } = recentData;
 
   if (recentActive.length === 0 && recentlyClosed.length === 0) {
@@ -368,11 +387,7 @@ function renderRecentTabs(container, recentData) {
   let globalIndex = 0;
 
   if (recentActive.length > 0) {
-    const section = createElement("div", "qal-section");
-    section.dataset.section = "recent-active";
-    section.appendChild(
-      createSectionHeader("recent-active", recentActive.length),
-    );
+    const section = createSection("recent-active", recentActive.length);
     for (const item of recentActive) {
       section.appendChild(
         createResultItem(item, "recent-active", "", globalIndex),
@@ -383,11 +398,7 @@ function renderRecentTabs(container, recentData) {
   }
 
   if (recentlyClosed.length > 0) {
-    const section = createElement("div", "qal-section");
-    section.dataset.section = "recent-closed";
-    section.appendChild(
-      createSectionHeader("recent-closed", recentlyClosed.length),
-    );
+    const section = createSection("recent-closed", recentlyClosed.length);
     for (const item of recentlyClosed) {
       section.appendChild(
         createResultItem(item, "recent-closed", "", globalIndex),
@@ -446,6 +457,7 @@ function renderDuplicateBanner(container, summary) {
 
 function renderEmpty(container) {
   container.innerHTML = "";
+  setResultsRole(container, "status");
   const empty = createElement("div", "qal-empty-state");
   empty.textContent = t("states.empty");
   container.appendChild(empty);
@@ -473,6 +485,7 @@ function createTip(text, action, actionLabel) {
  */
 function renderNoResults(container, query, tips) {
   container.innerHTML = "";
+  setResultsRole(container, "status");
   const empty = createElement("div", "qal-empty-state");
   const message = createElement("p", "qal-empty-message");
   message.innerHTML = t("states.noResults", { query: escapeHtml(query) });
@@ -503,6 +516,7 @@ function renderNoResults(container, query, tips) {
 
 function renderLoading(container) {
   container.innerHTML = "";
+  setResultsRole(container, "status");
   const loading = createElement("div", "qal-loading");
   loading.textContent = t("states.loading");
   container.appendChild(loading);
@@ -510,6 +524,7 @@ function renderLoading(container) {
 
 function renderError(container) {
   container.innerHTML = "";
+  setResultsRole(container, "status");
   const error = createElement("div", "qal-empty-state");
   error.textContent = t("states.error");
   container.appendChild(error);

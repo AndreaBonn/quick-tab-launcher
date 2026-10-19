@@ -194,6 +194,33 @@ describe("closing tabs from the panel (R5, R6)", () => {
     );
   });
 
+  it("offers no undo when the tab could not be closed", async () => {
+    const { shadowRoot, input } = await openWith({
+      search: SEARCH_TABS,
+      "close-tab": { closed: 0 },
+    });
+    await type(input, "git");
+    press(input, "w", { code: "KeyW", altKey: true });
+    await settle();
+    expect(shadowRoot.querySelector(".qal-toast")).toBeNull();
+    expect(shadowRoot.querySelectorAll(".qal-result-item")).toHaveLength(2);
+  });
+
+  it("holding Alt+W closes one tab per press, not on key repeat", async () => {
+    const { browserMock, input } = await openWith({
+      search: SEARCH_TABS,
+      "close-tab": { closed: 1 },
+    });
+    await type(input, "git");
+    press(input, "w", { code: "KeyW", altKey: true });
+    press(input, "w", { code: "KeyW", altKey: true, repeat: true });
+    await settle();
+    const closes = sentActions(browserMock).filter(
+      (m) => m.action === "close-tab",
+    );
+    expect(closes).toHaveLength(1);
+  });
+
   it("Alt+Z reopens the tab just closed", async () => {
     const { browserMock, input } = await openWith({
       search: SEARCH_TABS,
@@ -441,5 +468,158 @@ describe("language follows Firefox (L1)", () => {
     expect(shadowRoot.querySelector(".qal-input").placeholder).toContain(
       "Cerca schede",
     );
+  });
+});
+
+describe("review fixes - timing and state", () => {
+  it("a toggle that arrives before the panel is ready opens it once ready (#1)", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const browserMock = createBrowserMock();
+    let releaseLocale;
+    const realGet = browserMock.storage.local.get;
+    browserMock.storage.local.get = vi.fn((key) =>
+      key === "qal_locale"
+        ? new Promise((resolve) => {
+            releaseLocale = () => resolve({});
+          })
+        : realGet(key),
+    );
+    // Keep the shadow root open past the helper, which restores attachShadow
+    // before this delayed bootstrap creates the panel.
+    const originalAttachShadow = HTMLElement.prototype.attachShadow;
+    HTMLElement.prototype.attachShadow = function (options) {
+      return originalAttachShadow.call(this, { ...options, mode: "open" });
+    };
+    try {
+      await loadLauncher(browserMock);
+      const listener =
+        browserMock.runtime.onMessage.addListener.mock.calls[0][0];
+      listener({ action: "toggle" });
+      expect(document.getElementById("qal-shadow-host")).toBeNull();
+
+      releaseLocale();
+      await settle();
+
+      const host = document.getElementById("qal-shadow-host");
+      const overlay = host.shadowRoot.querySelector(".qal-overlay");
+      expect(overlay.style.display).toBe("");
+    } finally {
+      HTMLElement.prototype.attachShadow = originalAttachShadow;
+    }
+  });
+
+  it("closing a recent tab keeps the selection on the same row (#4)", async () => {
+    const recent = (ids) => ({
+      recentActive: ids.map((id) => ({
+        id,
+        title: `T${id}`,
+        url: `https://t${id}.com`,
+      })),
+      recentlyClosed: [],
+    });
+    let ids = [1, 2, 3, 4];
+    const { shadowRoot, input } = await openWith({
+      "get-recent-tabs": () => recent(ids),
+      "close-tab": (msg) => {
+        ids = ids.filter((id) => id !== msg.tabId);
+        return { closed: 1 };
+      },
+    });
+    press(input, "ArrowDown");
+    press(input, "ArrowDown");
+    press(input, "w", { code: "KeyW", altKey: true });
+    await settle();
+    const selected = shadowRoot.querySelector(".qal-result-item.qal-selected");
+    expect(selected.querySelector(".qal-result-title").textContent).toBe("T4");
+  });
+
+  it("reopening the panel keeps the page toast's undo working (#6)", async () => {
+    const { shadowRoot, browserMock, input, messageListener } = await openWith({
+      "preview-command": { affected: 2 },
+      "execute-command": { success: true, closed: 2 },
+    });
+    await type(input, ">altre");
+    press(input, "Enter");
+    await settle();
+    press(input, "Enter");
+    await settle();
+    messageListener({ action: "toggle" });
+    await settle();
+    shadowRoot
+      .querySelector('.qal-page-toast-slot [data-qal-action="undo"]')
+      .click();
+    await settle();
+    expect(sentActions(browserMock)).toContainEqual({
+      action: "undo-close",
+      count: 2,
+    });
+  });
+
+  it("the duplicates banner is outside the result list and hides while searching (#7)", async () => {
+    const { shadowRoot, input } = await openWith({
+      "get-duplicate-count": { count: 1, groups: [], more: 0 },
+    });
+    const banner = shadowRoot.querySelector(".qal-duplicate-banner");
+    expect(banner.closest(".qal-results")).toBeNull();
+    await type(input, "git");
+    expect(shadowRoot.querySelector(".qal-duplicates-slot").hidden).toBe(true);
+  });
+
+  it("drops a search reply that arrives after a newer keystroke (#8)", async () => {
+    let releaseFirst;
+    const { shadowRoot, input } = await openWith({
+      search: (msg) =>
+        msg.query === "old"
+          ? new Promise((resolve) => {
+              releaseFirst = () =>
+                resolve({
+                  tabs: [{ id: 1, title: "Stale", url: "https://s.com" }],
+                  bookmarks: [],
+                  history: [],
+                });
+            })
+          : {
+              tabs: [{ id: 2, title: "Fresh", url: "https://f.com" }],
+              bookmarks: [],
+              history: [],
+            },
+    });
+    await type(input, "old");
+    await type(input, "new");
+    releaseFirst();
+    await settle();
+    const titles = [...shadowRoot.querySelectorAll(".qal-result-title")].map(
+      (el) => el.textContent,
+    );
+    expect(titles).toEqual(["Fresh"]);
+  });
+});
+
+describe("accessibility of the result list", () => {
+  it("is a listbox of grouped options while it shows results", async () => {
+    const { shadowRoot, input } = await openWith({ search: SEARCH_TABS });
+    await type(input, "git");
+    const list = shadowRoot.querySelector(".qal-results");
+    expect(list.getAttribute("role")).toBe("listbox");
+    const group = list.querySelector('[role="group"]');
+    expect(group.getAttribute("aria-labelledby")).toBe("qal-section-tabs");
+    expect(list.querySelector(".qal-close-tab").tabIndex).toBe(-1);
+  });
+
+  it("becomes a status message, without an active option, when empty", async () => {
+    const { shadowRoot, input } = await openWith({ search: SEARCH_TABS });
+    await type(input, "git");
+    expect(input.hasAttribute("aria-activedescendant")).toBe(true);
+    const browserReplies = globalThis.browser.runtime.sendMessage;
+    browserReplies.mockImplementation(async () => ({
+      tabs: [],
+      bookmarks: [],
+      history: [],
+    }));
+    await type(input, "zzzz");
+    expect(shadowRoot.querySelector(".qal-results").getAttribute("role")).toBe(
+      "status",
+    );
+    expect(input.hasAttribute("aria-activedescendant")).toBe(false);
   });
 });

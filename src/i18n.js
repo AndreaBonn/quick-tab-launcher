@@ -347,7 +347,10 @@ function t(key, params) {
   }
   if (params) {
     for (const [k, v] of Object.entries(params)) {
-      message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), v);
+      // A function replacement keeps "      message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), v);" and "$1" in titles literal.
+      message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), () =>
+        String(v),
+      );
     }
   }
   return message;

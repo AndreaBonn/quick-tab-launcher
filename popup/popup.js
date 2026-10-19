@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderRecentTabs, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange, filterCommands, renderCommandResults, createIcon, renderFooterHints, isMacPlatform, t, tCount, renderSearchView, matchCommandsForSearch, buildToast, buildConfirmStrip, loadUserConfig, saveUserConfig */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderRecentTabs, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange, filterCommands, renderCommandResults, createIcon, renderFooterHints, isMacPlatform, isAltShortcut, t, tCount, renderSearchView, matchCommandsForSearch, buildToast, buildConfirmStrip, loadUserConfig, saveUserConfig */
 
 const IS_MAC = isMacPlatform(navigator.platform);
 const TOAST_MS = 8000;
@@ -18,6 +18,7 @@ const state = {
   activeTabState: null,
   pendingConfirmId: null,
   undoCount: 0,
+  isClosingTab: false,
   elements: {},
 };
 
@@ -127,7 +128,7 @@ async function fetchActiveTabState() {
   }
 }
 
-async function fetchRecentTabs() {
+async function fetchRecentTabs(preferredIndex = 0) {
   try {
     const recentData = await browser.runtime.sendMessage({
       action: "get-recent-tabs",
@@ -144,7 +145,10 @@ async function fetchRecentTabs() {
         type: "recent-closed",
       })),
     ];
-    state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
+    state.selectedIndex = Math.min(
+      preferredIndex,
+      state.flatResults.length - 1,
+    );
     if (state.selectedIndex >= 0) {
       updateSelection(state.elements.results, state.selectedIndex);
     }
@@ -259,19 +263,12 @@ async function toggleFulltextSearch() {
   if (state.elements.input.value.trim()) handleInput();
 }
 
-// Option+letter on macOS types a symbol, so match the physical key.
-function isAltShortcut(e, letter) {
-  return (
-    e.altKey &&
-    (e.code === `Key${letter.toUpperCase()}` || e.key.toLowerCase() === letter)
-  );
-}
-
 function handleShortcut(e) {
   if (isAltShortcut(e, "c")) toggleFulltextSearch();
   else if (isAltShortcut(e, "g")) toggleGroupedView();
-  else if (isAltShortcut(e, "w")) closeTab(state.selectedIndex);
-  else if (isAltShortcut(e, "z") && state.undoCount > 0) undoLastClose();
+  else if (isAltShortcut(e, "w")) {
+    if (!e.repeat) closeTab(state.selectedIndex);
+  } else if (isAltShortcut(e, "z") && state.undoCount > 0) undoLastClose();
   else if (e.key === "?" && !state.elements.input.value) toggleHelp();
   else if (e.key === "Escape" && state.pendingConfirmId) clearPendingConfirm();
   else return false;
@@ -331,6 +328,9 @@ function selectPrev() {
 function clearPendingConfirm() {
   state.pendingConfirmId = null;
   state.elements.results.querySelector(".qal-confirm")?.remove();
+  state.elements.results
+    .querySelector(".qal-has-confirm")
+    ?.classList.remove("qal-has-confirm");
 }
 
 async function requestConfirm(item) {
@@ -353,7 +353,10 @@ async function requestConfirm(item) {
   const row = state.elements.results.querySelector(
     `.qal-result-item[data-index="${state.selectedIndex}"]`,
   );
-  row?.after(buildConfirmStrip(tCount("confirm.closeTabs", affected)));
+  // Inside the row, so the listbox only holds options and the text is
+  // read with the selected action.
+  row?.classList.add("qal-has-confirm");
+  row?.appendChild(buildConfirmStrip(tCount("confirm.closeTabs", affected)));
 }
 
 function navigateTo(item, forceNewTab) {
@@ -403,26 +406,42 @@ function hideToast() {
   state.elements.toastSlot.replaceChildren();
 }
 
-function refreshCurrentView() {
+function refreshCurrentView(preferredIndex = 0) {
   if (state.elements.input.value.trim()) handleInput();
-  else fetchRecentTabs();
+  else fetchRecentTabs(preferredIndex);
 }
 
 async function closeTab(index) {
   const item = state.flatResults[index];
-  if (!item || !CLOSABLE_TYPES.includes(item.type)) return;
-  try {
-    await browser.runtime.sendMessage({ action: "close-tab", tabId: item.id });
-  } catch (err) {
-    console.warn("Quick TAB Launcher popup: close failed", err);
+  if (!item || !CLOSABLE_TYPES.includes(item.type) || state.isClosingTab) {
     return;
   }
-  showToast(t("toast.tabClosed", { title: item.title || item.url }), 1);
+  state.isClosingTab = true;
   const itemEl = state.elements.results.querySelector(
     `.qal-result-item[data-index="${index}"]`,
   );
-  if (item.type === "tab" && itemEl) removeResultItem(itemEl, item.id);
-  else refreshCurrentView();
+  let closed = 0;
+  try {
+    const result = await browser.runtime.sendMessage({
+      action: "close-tab",
+      tabId: item.id,
+    });
+    closed = result?.closed ?? 0;
+  } catch (err) {
+    console.warn("Quick TAB Launcher popup: close failed", err);
+  } finally {
+    state.isClosingTab = false;
+  }
+  if (closed === 0) {
+    refreshCurrentView(index);
+    return;
+  }
+  showToast(t("toast.tabClosed", { title: item.title || item.url }), 1);
+  if (item.type === "tab" && itemEl?.isConnected) {
+    removeResultItem(itemEl, item.id);
+  } else {
+    refreshCurrentView(index);
+  }
 }
 
 async function undoLastClose() {

@@ -642,14 +642,17 @@ describe("launcher.js - close tab via click", () => {
   beforeEach(async () => {
     document.documentElement.innerHTML = "<head></head><body></body>";
     browserMock = createBrowserMock();
-    browserMock.runtime.sendMessage.mockResolvedValue({
+    const searchReply = {
       tabs: [
         { id: 10, title: "Tab A", url: "https://a.com", favIconUrl: null },
         { id: 11, title: "Tab B", url: "https://b.com", favIconUrl: null },
       ],
       bookmarks: [],
       history: [],
-    });
+    };
+    browserMock.runtime.sendMessage.mockImplementation(async (msg) =>
+      msg.action === "close-tab" ? { closed: 1 } : searchReply,
+    );
     ({ shadowRoot, messageListener } = await loadLauncher(browserMock));
   });
 
@@ -676,13 +679,22 @@ describe("launcher.js - close tab via click", () => {
   });
 
   it("removes the tabs section when the last tab is closed", async () => {
-    browserMock.runtime.sendMessage.mockResolvedValue({
-      tabs: [
-        { id: 10, title: "Only Tab", url: "https://a.com", favIconUrl: null },
-      ],
-      bookmarks: [],
-      history: [],
-    });
+    browserMock.runtime.sendMessage.mockImplementation(async (msg) =>
+      msg.action === "close-tab"
+        ? { closed: 1 }
+        : {
+            tabs: [
+              {
+                id: 10,
+                title: "Only Tab",
+                url: "https://a.com",
+                favIconUrl: null,
+              },
+            ],
+            bookmarks: [],
+            history: [],
+          },
+    );
 
     messageListener({ action: "toggle" });
     const input = shadowRoot.querySelector(".qal-input");

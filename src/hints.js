@@ -42,6 +42,22 @@ const HINT_SETS = {
 
 const MAC_KEY_NAMES = { Ctrl: "⌘", Alt: "⌥", Shift: "⇧" };
 
+/**
+ * Alt+letter shortcut, matched on the physical key: Option+letter on macOS
+ * types a symbol (G gives ©). AltGr arrives as Ctrl+Alt on Windows and types
+ * characters (ż, ć), so it is left alone.
+ *
+ * @param {KeyboardEvent} e - keydown event.
+ * @param {string} letter - Lowercase letter.
+ * @returns {boolean}
+ */
+function isAltShortcut(e, letter) {
+  if (!e.altKey || e.ctrlKey || e.metaKey) return false;
+  return (
+    e.code === `Key${letter.toUpperCase()}` || e.key.toLowerCase() === letter
+  );
+}
+
 function isMacPlatform(platform) {
   return /mac/i.test(platform || "");
 }
@@ -94,6 +110,7 @@ if (typeof module !== "undefined" && module.exports) {
     HINTS,
     HINT_SETS,
     isMacPlatform,
+    isAltShortcut,
     formatKey,
     getFooterHints,
     renderFooterHints,

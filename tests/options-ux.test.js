@@ -200,3 +200,30 @@ describe("page layout (O2, O5, S4)", () => {
     expect($(".qal-options-footer").textContent).toContain("Bonn");
   });
 });
+
+describe("review fixes - options (#11)", () => {
+  it("an emptied number field is invalid, not zero", async () => {
+    const browserMock = await openOptions();
+    const field = $("#qal-debounce-ms");
+    field.value = "";
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 450));
+    expect(field.hasAttribute("aria-invalid")).toBe(true);
+    expect(browserMock.store.qal_user_config).toBeUndefined();
+  });
+
+  it("leaving the Change button stops recording keys", async () => {
+    const browserMock = await openOptions();
+    const btn = $("#qal-shortcut-change");
+    btn.click();
+    btn.dispatchEvent(new Event("blur"));
+    const event = new KeyboardEvent("keydown", {
+      code: "KeyJ",
+      altKey: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(browserMock.commands.update).not.toHaveBeenCalled();
+  });
+});

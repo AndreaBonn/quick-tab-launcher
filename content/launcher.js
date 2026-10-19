@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, renderSearchView, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform, isAltShortcut, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, renderSearchView, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
 
 (function () {
   "use strict";
@@ -26,7 +26,10 @@
     activeTabState: null,
     searchCommands: [],
     pendingConfirmId: null,
-    undoCount: 0,
+    panelUndoCount: 0,
+    pageUndoCount: 0,
+    isClosingTab: false,
+    searchSeq: 0,
     panelToastTimeout: null,
     pageToastTimeout: null,
     guideState: null,
@@ -112,6 +115,8 @@
     guide.hidden = true;
     const toastSlot = createElement("div", "qal-toast-slot");
     toastSlot.setAttribute("aria-live", "polite");
+    // The banner has its own buttons, so it lives outside the listbox.
+    const duplicatesSlot = createElement("div", "qal-duplicates-slot");
 
     const results = createElement("div", "qal-results");
     results.id = RESULTS_ELEMENT_ID;
@@ -124,6 +129,7 @@
       quickActions,
       guide,
       toastSlot,
+      duplicatesSlot,
       results,
       footer,
     );
@@ -146,6 +152,7 @@
       quickActions,
       guide,
       toastSlot,
+      duplicatesSlot,
       pageToastSlot,
     };
     applyOverlayTranslations();
@@ -230,13 +237,9 @@
     );
     state.elements.groupToggle.addEventListener("click", toggleGroupedView);
     state.elements.panel.addEventListener("click", handlePanelAction);
+    state.elements.duplicatesSlot.addEventListener("click", handleBannerClick);
     state.elements.pageToastSlot.addEventListener("click", (e) => {
       if (e.target.closest('[data-qal-action="undo"]')) undoFromPage();
-    });
-
-    browser.runtime.onMessage.addListener((message) => {
-      if (message.action === "toggle") toggleLauncher();
-      if (message.action === "close") closeLauncher();
     });
 
     onLocaleChange(() => {
@@ -266,6 +269,8 @@
     hidePanelToast();
     renderEmpty(state.elements.results);
     state.elements.quickActions.hidden = false;
+    state.elements.duplicatesSlot.replaceChildren();
+    state.elements.duplicatesSlot.hidden = false;
     renderQuickActions(state.elements.quickActions, quickCommands());
 
     fetchRecentTabs();
@@ -292,7 +297,7 @@
     hidePanelToast();
   }
 
-  async function fetchRecentTabs() {
+  async function fetchRecentTabs(preferredIndex = 0) {
     try {
       const recentData = await browser.runtime.sendMessage({
         action: "get-recent-tabs",
@@ -309,7 +314,8 @@
           type: "recent-closed",
         })),
       ];
-      state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
+      const last = state.flatResults.length - 1;
+      state.selectedIndex = Math.min(preferredIndex, last);
       if (state.selectedIndex >= 0) {
         updateSelection(state.elements.results, state.selectedIndex);
       }
@@ -333,7 +339,8 @@
       const stored = await browser.storage.local.get(DUPLICATES_DISMISSED_KEY);
       // "Not now" hides the banner until the set of duplicates changes.
       if (stored[DUPLICATES_DISMISSED_KEY] === state.duplicateSignature) return;
-      renderDuplicateBanner(state.elements.results, summary);
+      if (!state.isVisible) return;
+      renderDuplicateBanner(state.elements.duplicatesSlot, summary);
     } catch (err) {
       console.warn("Quick TAB Launcher: duplicate check failed", err);
     }
@@ -436,20 +443,20 @@
 
   function showPanelToast(message, undoCount = 0) {
     clearTimeout(state.panelToastTimeout);
-    state.undoCount = undoCount;
+    state.panelUndoCount = undoCount;
     showToastIn(state.elements.toastSlot, message, undoCount);
     state.panelToastTimeout = setTimeout(hidePanelToast, PANEL_TOAST_MS);
   }
 
   function hidePanelToast() {
     clearTimeout(state.panelToastTimeout);
-    state.undoCount = 0;
+    state.panelUndoCount = 0;
     state.elements.toastSlot.replaceChildren();
   }
 
   function showPageToast(message, undoCount = 0) {
     clearTimeout(state.pageToastTimeout);
-    state.undoCount = undoCount;
+    state.pageUndoCount = undoCount;
     showToastIn(state.elements.pageToastSlot, message, undoCount);
     state.pageToastTimeout = setTimeout(() => {
       state.elements.pageToastSlot.replaceChildren();
@@ -466,43 +473,56 @@
   }
 
   async function undoLastClose() {
-    const count = state.undoCount;
+    const count = state.panelUndoCount;
     hidePanelToast();
     await requestUndo(count);
     refreshCurrentView();
   }
 
   async function undoFromPage() {
-    const count = state.undoCount;
-    state.undoCount = 0;
+    const count = state.pageUndoCount;
+    state.pageUndoCount = 0;
     state.elements.pageToastSlot.replaceChildren();
     await requestUndo(count);
   }
 
-  function refreshCurrentView() {
+  function refreshCurrentView(preferredIndex = 0) {
     if (!state.isVisible) return;
     if (state.elements.input.value.trim()) retriggerSearch();
-    else fetchRecentTabs();
+    else fetchRecentTabs(preferredIndex);
   }
 
   async function closeTabFromPanel(index) {
     const item = state.flatResults[index];
     if (!item || !CLOSABLE_TYPES.includes(item.type)) return;
-    try {
-      await browser.runtime.sendMessage({
-        action: "close-tab",
-        tabId: item.id,
-      });
-    } catch (err) {
-      console.warn("Quick TAB Launcher: close failed", err);
-      return;
-    }
-    showPanelToast(t("toast.tabClosed", { title: item.title || item.url }), 1);
+    if (state.isClosingTab) return;
+    state.isClosingTab = true;
+    // Capture the row before the await: the list may be re-rendered meanwhile.
     const itemEl = state.elements.results.querySelector(
       `.qal-result-item[data-index="${index}"]`,
     );
-    if (item.type === "tab" && itemEl) removeResultItem(itemEl, item.id);
-    else refreshCurrentView();
+    let closed = 0;
+    try {
+      const result = await browser.runtime.sendMessage({
+        action: "close-tab",
+        tabId: item.id,
+      });
+      closed = result?.closed ?? 0;
+    } catch (err) {
+      console.warn("Quick TAB Launcher: close failed", err);
+    } finally {
+      state.isClosingTab = false;
+    }
+    if (closed === 0) {
+      refreshCurrentView(index);
+      return;
+    }
+    showPanelToast(t("toast.tabClosed", { title: item.title || item.url }), 1);
+    if (item.type === "tab" && itemEl?.isConnected) {
+      removeResultItem(itemEl, item.id);
+    } else {
+      refreshCurrentView(index);
+    }
   }
 
   async function closeDomainTabsFromPanel(domain) {
@@ -522,6 +542,9 @@
   function clearPendingConfirm() {
     state.pendingConfirmId = null;
     state.elements.results.querySelector(".qal-confirm")?.remove();
+    state.elements.results
+      .querySelector(".qal-has-confirm")
+      ?.classList.remove("qal-has-confirm");
   }
 
   async function requestConfirm(item) {
@@ -535,6 +558,9 @@
     } catch (err) {
       console.warn("Quick TAB Launcher: preview failed", err);
     }
+    const isStillSelected =
+      state.isVisible && state.flatResults[state.selectedIndex]?.id === item.id;
+    if (!isStillSelected) return;
     if (affected === 0) {
       closeLauncher();
       showPageToast(t("done.nothing"));
@@ -545,7 +571,10 @@
     const row = state.elements.results.querySelector(
       `.qal-result-item[data-index="${state.selectedIndex}"]`,
     );
-    row?.after(buildConfirmStrip(tCount("confirm.closeTabs", affected)));
+    // Inside the row, so the listbox only holds options and the text is
+    // read with the selected action.
+    row?.classList.add("qal-has-confirm");
+    row?.appendChild(buildConfirmStrip(tCount("confirm.closeTabs", affected)));
   }
 
   function outcomeMessage(commandId, result) {
@@ -577,8 +606,10 @@
     clearTimeout(state.searchTimeout);
     clearTimeout(state.loadingTimeout);
     const query = state.elements.input.value;
+    const seq = ++state.searchSeq;
     clearPendingConfirm();
     state.elements.quickActions.hidden = Boolean(query.trim());
+    state.elements.duplicatesSlot.hidden = Boolean(query.trim());
 
     if (!query.trim()) {
       setFooterMode("recent");
@@ -606,6 +637,8 @@
           action: "search",
           query,
         });
+        // A newer keystroke or a closed panel makes this reply obsolete.
+        if (seq !== state.searchSeq || !state.isVisible) return;
         clearTimeout(state.loadingTimeout);
         state.results = results;
         state.searchCommands = matchCommandsForSearch(
@@ -667,15 +700,6 @@
     }
   }
 
-  // Option+letter on macOS types a symbol (©, ç), so match the physical key.
-  function isAltShortcut(e, letter) {
-    return (
-      e.altKey &&
-      (e.code === `Key${letter.toUpperCase()}` ||
-        e.key.toLowerCase() === letter)
-    );
-  }
-
   function handleKeydown(e) {
     if (isAltShortcut(e, "c")) {
       e.preventDefault();
@@ -697,11 +721,11 @@
 
     if (isAltShortcut(e, "w")) {
       e.preventDefault();
-      closeTabFromPanel(state.selectedIndex);
+      if (!e.repeat) closeTabFromPanel(state.selectedIndex);
       return;
     }
 
-    if (isAltShortcut(e, "z") && state.undoCount > 0) {
+    if (isAltShortcut(e, "z") && state.panelUndoCount > 0) {
       e.preventDefault();
       undoLastClose();
       return;
@@ -785,6 +809,22 @@
     }
   }
 
+  function handleBannerClick(e) {
+    const dupDismiss = e.target.closest(".qal-duplicate-dismiss");
+    if (dupDismiss) {
+      e.stopPropagation();
+      dismissDuplicateBanner(dupDismiss.closest(".qal-duplicate-banner"));
+      return;
+    }
+
+    const dupAction = e.target.closest(".qal-duplicate-action");
+    if (dupAction) {
+      e.stopPropagation();
+      closeDuplicatesFromBanner(dupAction.closest(".qal-duplicate-banner"));
+      return;
+    }
+  }
+
   function handleResultClick(e) {
     const closeBtn = e.target.closest(".qal-close-tab");
     if (closeBtn) {
@@ -801,23 +841,9 @@
       return;
     }
 
-    const dupDismiss = e.target.closest(".qal-duplicate-dismiss");
-    if (dupDismiss) {
-      e.stopPropagation();
-      dismissDuplicateBanner(dupDismiss.closest(".qal-duplicate-banner"));
-      return;
-    }
-
     const domainHeader = e.target.closest(".qal-domain-header");
     if (domainHeader && !e.target.closest("button")) {
       domainHeader.parentElement.classList.toggle("qal-collapsed");
-      return;
-    }
-
-    const dupAction = e.target.closest(".qal-duplicate-action");
-    if (dupAction) {
-      e.stopPropagation();
-      closeDuplicatesFromBanner(dupAction.closest(".qal-duplicate-banner"));
       return;
     }
 
@@ -886,9 +912,24 @@
     }
   });
 
+  // Registered before the async bootstrap so a toggle sent right after an
+  // on-demand injection is not lost: it waits until the panel exists.
+  let isReady = false;
+  let hasPendingToggle = false;
+  browser.runtime.onMessage.addListener((message) => {
+    if (!isReady) {
+      if (message.action === "toggle") hasPendingToggle = !hasPendingToggle;
+      return;
+    }
+    if (message.action === "toggle") toggleLauncher();
+    if (message.action === "close") closeLauncher();
+  });
+
   async function bootstrap() {
     await Promise.all([loadConfig(), loadLocale()]);
     init();
+    isReady = true;
+    if (hasPendingToggle) toggleLauncher();
   }
 
   if (document.readyState === "loading") {
