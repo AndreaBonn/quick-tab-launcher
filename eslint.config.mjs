@@ -37,7 +37,7 @@ export default [
     // The locale dictionary stays cohesive: its size is translation data. Capped
     // at its current size so it cannot keep growing unnoticed.
     files: ["src/i18n.js"],
-    rules: { "max-lines": ["error", { max: 530, skipBlankLines: true, skipComments: true }] },
+    rules: { "max-lines": ["error", { max: 522, skipBlankLines: true, skipComments: true }] },
   },
   {
     files: ["tests/**/*.js", "vitest.config.mjs", "eslint.config.mjs"],
