@@ -45,6 +45,7 @@ const {
  */
 function createBrowserMock() {
   return {
+    i18n: { getUILanguage: () => "it-IT" },
     runtime: {
       getURL: vi.fn((path) => `moz-extension://fake-id/${path}`),
       sendMessage: vi.fn().mockResolvedValue({

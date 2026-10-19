@@ -418,3 +418,28 @@ describe("recently closed rows can be reopened by Enter (A3 wording)", () => {
 });
 
 vi.setConfig({ testTimeout: 10000 });
+
+describe("language follows Firefox (L1)", () => {
+  async function openIn(uiLanguage, store = {}) {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const browserMock = createBrowserMock();
+    browserMock.i18n.getUILanguage = () => uiLanguage;
+    Object.assign(browserMock.store, store);
+    const { shadowRoot } = await loadLauncher(browserMock);
+    return shadowRoot;
+  }
+
+  it("an English Firefox gets an English panel with nothing stored", async () => {
+    const shadowRoot = await openIn("en-US");
+    expect(shadowRoot.querySelector(".qal-input").placeholder).toBe(
+      "Search tabs, bookmarks, history, or > actions",
+    );
+  });
+
+  it("an explicit choice wins over Firefox's language", async () => {
+    const shadowRoot = await openIn("en-US", { qal_locale: "it" });
+    expect(shadowRoot.querySelector(".qal-input").placeholder).toContain(
+      "Cerca schede",
+    );
+  });
+});

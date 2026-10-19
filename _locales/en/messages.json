@@ -1,0 +1,8 @@
+{
+  "extensionDescription": {
+    "message": "Spotlight-style command palette to search tabs, bookmarks and history with one shortcut."
+  },
+  "commandToggle": {
+    "message": "Open/close Quick Tab Launcher"
+  }
+}

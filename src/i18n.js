@@ -293,7 +293,11 @@ const I18N_MESSAGES = {
   },
 };
 
+// Used for any Firefox language without a translation.
+const I18N_FALLBACK_LOCALE = "en";
+
 let i18nCurrentLocale = I18N_DEFAULT_LOCALE;
+let i18nHasStoredChoice = false;
 const i18nChangeListeners = [];
 
 function t(key, params) {
@@ -334,29 +338,78 @@ function getLocale() {
   return i18nCurrentLocale;
 }
 
+/**
+ * Picks the interface language: the user's explicit choice when valid,
+ * otherwise Firefox's own language, otherwise English.
+ *
+ * @param {string|undefined} stored - Value saved by the settings page.
+ * @param {string} uiLanguage - Firefox UI language tag, e.g. "it-IT".
+ * @returns {string} A supported locale.
+ */
+function resolveLocale(stored, uiLanguage) {
+  if (I18N_SUPPORTED_LOCALES.includes(stored)) return stored;
+  const base = (uiLanguage || "").toLowerCase().split("-")[0];
+  return I18N_SUPPORTED_LOCALES.includes(base) ? base : I18N_FALLBACK_LOCALE;
+}
+
+function getBrowserLanguage() {
+  try {
+    return browser.i18n.getUILanguage();
+  } catch {
+    return typeof navigator !== "undefined" ? navigator.language : "";
+  }
+}
+
+/** Language Firefox would give: used when the user has not chosen one. */
+function detectLocale() {
+  return resolveLocale(undefined, getBrowserLanguage());
+}
+
+/** "auto" while following Firefox, otherwise the chosen locale. */
+function getLocalePreference() {
+  return i18nHasStoredChoice ? i18nCurrentLocale : "auto";
+}
+
+function notifyLocaleChange(lang) {
+  for (const listener of i18nChangeListeners) {
+    listener(lang);
+  }
+}
+
 async function loadLocale() {
+  let stored;
   try {
     const result = await browser.storage.local.get(I18N_STORAGE_KEY);
-    const stored = result[I18N_STORAGE_KEY];
-    if (stored && I18N_SUPPORTED_LOCALES.includes(stored)) {
-      i18nCurrentLocale = stored;
-    }
+    stored = result[I18N_STORAGE_KEY];
   } catch {
-    // Storage unavailable: use default
+    // Storage unavailable: follow Firefox's language
   }
+  i18nHasStoredChoice = I18N_SUPPORTED_LOCALES.includes(stored);
+  i18nCurrentLocale = resolveLocale(stored, getBrowserLanguage());
+}
+
+/** Forgets the chosen language and goes back to following Firefox. */
+async function clearLocale() {
+  i18nHasStoredChoice = false;
+  i18nCurrentLocale = detectLocale();
+  try {
+    await browser.storage.local.remove(I18N_STORAGE_KEY);
+  } catch {
+    // Storage unavailable: change applies in memory only
+  }
+  notifyLocaleChange(i18nCurrentLocale);
 }
 
 async function setLocale(lang) {
   if (!I18N_SUPPORTED_LOCALES.includes(lang)) return;
   i18nCurrentLocale = lang;
+  i18nHasStoredChoice = true;
   try {
     await browser.storage.local.set({ [I18N_STORAGE_KEY]: lang });
   } catch {
     // Storage unavailable: locale set in memory only
   }
-  for (const listener of i18nChangeListeners) {
-    listener(lang);
-  }
+  notifyLocaleChange(lang);
 }
 
 function setLocaleFromStorage(lang) {
@@ -395,6 +448,10 @@ if (typeof module !== "undefined" && module.exports) {
     t,
     tCount,
     getLocale,
+    resolveLocale,
+    detectLocale,
+    getLocalePreference,
+    clearLocale,
     loadLocale,
     setLocale,
     setLocaleFromStorage,

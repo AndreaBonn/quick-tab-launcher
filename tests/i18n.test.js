@@ -14,11 +14,12 @@ const {
   applyTranslations,
 } = require("../src/i18n.js");
 
-function createBrowserMock(storedLocale) {
+function createBrowserMock(storedLocale, uiLanguage = "it-IT") {
   const storage = storedLocale
     ? { [I18N_STORAGE_KEY]: storedLocale }
     : {};
   return {
+    i18n: { getUILanguage: () => uiLanguage },
     storage: {
       local: {
         get: vi.fn(async (key) => {
@@ -27,6 +28,9 @@ function createBrowserMock(storedLocale) {
         }),
         set: vi.fn(async (items) => {
           Object.assign(storage, items);
+        }),
+        remove: vi.fn(async (key) => {
+          delete storage[key];
         }),
       },
     },
@@ -75,21 +79,67 @@ describe("i18n - loadLocale()", () => {
     delete globalThis.browser;
   });
 
-  it("keeps default when storage is empty", async () => {
-    const mock = createBrowserMock(null);
-    globalThis.browser = mock;
+  it("follows Firefox's language when nothing is stored (L1)", async () => {
+    globalThis.browser = createBrowserMock(null, "en-GB");
     setLocaleFromStorage("it");
+    await loadLocale();
+    expect(getLocale()).toBe("en");
+
+    globalThis.browser = createBrowserMock(null, "it-IT");
     await loadLocale();
     expect(getLocale()).toBe("it");
     delete globalThis.browser;
   });
 
-  it("ignores unsupported locale from storage", async () => {
-    const mock = createBrowserMock("fr");
-    globalThis.browser = mock;
+  it("falls back to English for languages it does not have", async () => {
+    globalThis.browser = createBrowserMock(null, "fr-FR");
     setLocaleFromStorage("it");
     await loadLocale();
+    expect(getLocale()).toBe("en");
+    delete globalThis.browser;
+  });
+
+  it("ignores an unsupported stored locale and uses Firefox's", async () => {
+    globalThis.browser = createBrowserMock("fr", "it-IT");
+    setLocaleFromStorage("en");
+    await loadLocale();
     expect(getLocale()).toBe("it");
+    delete globalThis.browser;
+  });
+});
+
+describe("i18n - automatic language (L1, O3)", () => {
+  const { resolveLocale, clearLocale, getLocalePreference } = require(
+    "../src/i18n.js",
+  );
+
+  it("resolveLocale prefers a valid stored choice", () => {
+    expect(resolveLocale("en", "it-IT")).toBe("en");
+    expect(resolveLocale(undefined, "it")).toBe("it");
+    expect(resolveLocale(undefined, "de-DE")).toBe("en");
+    expect(resolveLocale(undefined, "")).toBe("en");
+  });
+
+  it("reports auto until a language is chosen, then the choice", async () => {
+    globalThis.browser = createBrowserMock(null, "it-IT");
+    await loadLocale();
+    expect(getLocalePreference()).toBe("auto");
+    await setLocale("en");
+    expect(getLocalePreference()).toBe("en");
+    delete globalThis.browser;
+  });
+
+  it("clearLocale forgets the choice and goes back to Firefox's language", async () => {
+    const mock = createBrowserMock("en", "it-IT");
+    globalThis.browser = mock;
+    await loadLocale();
+    const listener = vi.fn();
+    onLocaleChange(listener);
+    await clearLocale();
+    expect(mock.storage.local.remove).toHaveBeenCalledWith(I18N_STORAGE_KEY);
+    expect(getLocale()).toBe("it");
+    expect(getLocalePreference()).toBe("auto");
+    expect(listener).toHaveBeenCalledWith("it");
     delete globalThis.browser;
   });
 });

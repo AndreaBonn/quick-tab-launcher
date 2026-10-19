@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, renderSearchView, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, renderSearchView, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
 
 (function () {
   "use strict";
@@ -877,8 +877,10 @@
     }
     if (changes[I18N_STORAGE_KEY]) {
       const newLang = changes[I18N_STORAGE_KEY].newValue;
-      if (newLang && I18N_SUPPORTED_LOCALES.includes(newLang)) {
-        setLocaleFromStorage(newLang);
+      // No value: the user went back to following Firefox's language.
+      const lang = newLang ?? detectLocale();
+      if (I18N_SUPPORTED_LOCALES.includes(lang)) {
+        setLocaleFromStorage(lang);
         applyOverlayTranslations();
       }
     }

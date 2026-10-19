@@ -1,0 +1,8 @@
+{
+  "extensionDescription": {
+    "message": "Palette comandi Spotlight-style per cercare schede, segnalibri e cronologia con una scorciatoia."
+  },
+  "commandToggle": {
+    "message": "Apri/chiudi Quick Tab Launcher"
+  }
+}

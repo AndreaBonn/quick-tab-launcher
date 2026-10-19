@@ -22,6 +22,7 @@ export function createBrowserMock(replies = {}) {
   const store = {};
   return {
     store,
+    i18n: { getUILanguage: () => "it-IT" },
     runtime: {
       getURL: vi.fn((path) => `moz-extension://fake-id/${path}`),
       sendMessage: vi.fn(async (message) => {

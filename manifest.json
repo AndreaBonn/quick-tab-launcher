@@ -2,7 +2,8 @@
   "manifest_version": 2,
   "name": "Quick Tab Launcher",
   "version": "2.0.0",
-  "description": "Palette comandi Spotlight-style per cercare schede, segnalibri e cronologia con una scorciatoia.",
+  "default_locale": "en",
+  "description": "__MSG_extensionDescription__",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -67,7 +68,7 @@
         "default": "Ctrl+Shift+Space",
         "mac": "MacCtrl+Shift+Space"
       },
-      "description": "Apri/chiudi Quick Tab Launcher"
+      "description": "__MSG_commandToggle__"
     }
   },
   "browser_specific_settings": {
