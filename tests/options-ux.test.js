@@ -146,6 +146,81 @@ describe("shortcut (O1)", () => {
   });
 });
 
+describe("shortcut capture guards", () => {
+  const press = (init) =>
+    document.dispatchEvent(new KeyboardEvent("keydown", init));
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it("a modifier pressed alone neither saves nor ends the capture", async () => {
+    const browserMock = await openOptions();
+    const btn = $("#qal-shortcut-change");
+    btn.click();
+    press({ code: "ControlLeft", key: "Control", ctrlKey: true });
+    await flush();
+
+    expect(browserMock.commands.update).not.toHaveBeenCalled();
+    expect(btn.getAttribute("aria-pressed")).toBe("true");
+    expect($("#qal-shortcut-status").textContent).toContain("Premi");
+
+    press({ code: "KeyJ", key: "j", ctrlKey: true });
+    await flush();
+    expect(browserMock.commands.update).toHaveBeenCalledWith({
+      name: "toggle-launcher",
+      shortcut: "Ctrl+J",
+    });
+  });
+
+  it("a blur outside the capture leaves the status untouched", async () => {
+    const browserMock = await openOptions();
+    const btn = $("#qal-shortcut-change");
+    btn.click();
+    press({ code: "KeyJ", key: "j", altKey: true });
+    await flush();
+    const saved = $("#qal-shortcut-status").textContent;
+    expect(saved).toBe("Scorciatoia aggiornata.");
+    expect(browserMock.commands.update).toHaveBeenCalledTimes(1);
+
+    btn.dispatchEvent(new Event("blur"));
+    expect($("#qal-shortcut-status").textContent).toBe(saved);
+  });
+
+  it("blur during the capture clears the prompt (paired positive)", async () => {
+    await openOptions();
+    const btn = $("#qal-shortcut-change");
+    btn.click();
+    expect($("#qal-shortcut-status").textContent).not.toBe("");
+    btn.dispatchEvent(new Event("blur"));
+    expect($("#qal-shortcut-status").textContent).toBe("");
+  });
+
+  it("a second click during the capture does not restart it", async () => {
+    const browserMock = await openOptions();
+    const btn = $("#qal-shortcut-change");
+    btn.click();
+    press({ code: "KeyA" });
+    const invalid = $("#qal-shortcut-status").textContent;
+    expect(invalid).toContain("Ctrl o Alt");
+
+    btn.click();
+    expect($("#qal-shortcut-status").textContent).toBe(invalid);
+
+    press({ code: "KeyJ", key: "j", altKey: true });
+    await flush();
+    expect(browserMock.commands.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("an invalid combination marks the status as an error", async () => {
+    await openOptions();
+    const status = $("#qal-shortcut-status");
+    $("#qal-shortcut-change").click();
+    expect(status.classList.contains("qal-shortcut-status--error")).toBe(false);
+
+    press({ code: "KeyA" });
+    expect(status.classList.contains("qal-shortcut-status--error")).toBe(true);
+    press({ key: "Escape" }); // release the document-level listener
+  });
+});
+
 describe("language menu (O3)", () => {
   it("starts on Automatic when nothing was chosen", async () => {
     await openOptions();
