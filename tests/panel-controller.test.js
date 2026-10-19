@@ -50,14 +50,16 @@ describe("panel controller", () => {
     await search(panel, "old");
     await search(panel, "new");
     old.resolve(tabResults("Obsolete page"));
-    await Promise.resolve(); await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(panel.elements.results.textContent).toContain("Latest page");
     expect(panel.state.results.tabs[0].title).toBe("Latest page");
     expect(panel.hooks.onQueryChange).toHaveBeenLastCalledWith("new");
   });
 
   it("ignores an obsolete rejection without cancelling the newer loading timer", async () => {
-    const old = deferred(); const current = deferred();
+    const old = deferred();
+    const current = deferred();
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const panel = setup({ search: ({ query }) => query === "old" ? old.promise : current.promise });
     await search(panel, "old");
@@ -95,19 +97,22 @@ describe("panel controller", () => {
   });
 
   it("cancels confirmation when selection changes during preview", async () => {
-    const preview = deferred(); const panel = setup({ "preview-command": () => preview.promise });
+    const preview = deferred();
+    const panel = setup({ "preview-command": () => preview.promise });
     const item = showCommand(panel);
     const pending = panel.controller.requestConfirm(item);
     panel.state.flatResults.push({ id: "mute-tab", type: "command" });
     panel.state.selectedIndex = 1;
-    preview.resolve({ affected: 3 }); await pending;
+    preview.resolve({ affected: 3 });
+    await pending;
     expect(panel.state.pendingConfirmId).toBeNull();
     expect(panel.elements.results.querySelector(".qal-confirm")).toBeNull();
     expect(browser.runtime.sendMessage).toHaveBeenCalledWith({ action: "preview-command", commandId: item.id });
   });
 
   it("confirms only the second activation and Escape cancels the strip", async () => {
-    const panel = setup({ "preview-command": { affected: 3 } }); const item = showCommand(panel);
+    const panel = setup({ "preview-command": { affected: 3 } });
+    const item = showCommand(panel);
     await panel.controller.requestConfirm(item);
     expect(panel.elements.results.querySelector(".qal-confirm").textContent).toContain("3");
     panel.controller.navigateTo(item, false);
@@ -115,12 +120,15 @@ describe("panel controller", () => {
     key(panel, "Escape");
     expect(panel.state.pendingConfirmId).toBeNull();
     expect(panel.hooks.close).not.toHaveBeenCalled();
-    key(panel, "Escape"); expect(panel.hooks.close).toHaveBeenCalledOnce();
+    key(panel, "Escape");
+    expect(panel.hooks.close).toHaveBeenCalledOnce();
   });
 
   it("reports nothing to confirm when preview rejects", async () => {
-    const failure = new Error("Preview failed"); const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const panel = setup({ "preview-command": () => Promise.reject(failure) }); const item = showCommand(panel);
+    const failure = new Error("Preview failed");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const panel = setup({ "preview-command": () => Promise.reject(failure) });
+    const item = showCommand(panel);
     await panel.controller.requestConfirm(item);
     expect(panel.hooks.onNothingToConfirm).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalledWith("Quick TAB Launcher: preview failed", failure);
@@ -134,25 +142,29 @@ describe("panel controller", () => {
     [{ type: "bookmark", url: "https://example.com" }, false, { action: "navigate", type: "bookmark", url: "https://example.com", openInCurrent: true }],
     [{ type: "history", url: "https://example.com" }, true, { action: "navigate", type: "history", url: "https://example.com", openInCurrent: false }],
   ])("navigates %j and delegates the host outcome", (item, newTab, message) => {
-    const panel = setup(); panel.controller.navigateTo(item, newTab);
+    const panel = setup();
+    panel.controller.navigateTo(item, newTab);
     expect(browser.runtime.sendMessage).toHaveBeenCalledWith(message);
     expect(panel.hooks.afterNavigate).toHaveBeenCalledWith(item);
   });
 
   it("delegates commands without navigating or closing the host itself", () => {
-    const panel = setup(); panel.controller.navigateTo({ type: "command", id: "mute-tab" });
+    const panel = setup();
+    panel.controller.navigateTo({ type: "command", id: "mute-tab" });
     expect(panel.hooks.runCommand).toHaveBeenCalledWith("mute-tab");
     expect(panel.hooks.afterNavigate).not.toHaveBeenCalled();
   });
 
   it("sends only one close-tab for repeated Alt+W and concurrent key presses", async () => {
-    const pending = deferred(); const panel = setup({ search: () => tabResults(), "close-tab": () => pending.promise });
+    const pending = deferred();
+    const panel = setup({ search: () => tabResults(), "close-tab": () => pending.promise });
     await search(panel, "example");
     key(panel, "w", { altKey: true, code: "KeyW" });
     key(panel, "w", { altKey: true, code: "KeyW", repeat: true });
     key(panel, "w", { altKey: true, code: "KeyW" });
     expect(browser.runtime.sendMessage.mock.calls.filter(([m]) => m.action === "close-tab")).toEqual([[{ action: "close-tab", tabId: 7 }]]);
-    pending.resolve({ closed: 1 }); await vi.advanceTimersByTimeAsync(0);
+    pending.resolve({ closed: 1 });
+    await vi.advanceTimersByTimeAsync(0);
     expect(panel.state.results.tabs).toEqual([]);
     expect(panel.elements.toastSlot.textContent).toContain("Latest page");
     expect(panel.state.panelUndoCount).toBe(1);
@@ -172,8 +184,11 @@ describe("panel controller", () => {
   });
 
   it("fetches recent, active and web search state and notifies the host", async () => {
-    const active = { muted: true }; const panel = setup({ "get-active-tab-state": active, "get-web-search-state": { enabled: true }, "get-recent-tabs": { recentActive: [{ id: 1, title: "Recent" }], recentlyClosed: [{ sessionId: "s", title: "Closed" }] } });
-    await panel.controller.fetchRecentTabs(1); await panel.controller.fetchActiveTabState(); await panel.controller.fetchWebSearchState();
+    const active = { muted: true };
+    const panel = setup({ "get-active-tab-state": active, "get-web-search-state": { enabled: true }, "get-recent-tabs": { recentActive: [{ id: 1, title: "Recent" }], recentlyClosed: [{ sessionId: "s", title: "Closed" }] } });
+    await panel.controller.fetchRecentTabs(1);
+    await panel.controller.fetchActiveTabState();
+    await panel.controller.fetchWebSearchState();
     expect(panel.state.flatResults.map((item) => item.type)).toEqual(["recent-active", "recent-closed"]);
     expect(panel.state.selectedIndex).toBe(1);
     expect(panel.elements.results.textContent).toContain("Closed");
@@ -190,7 +205,8 @@ describe("panel controller", () => {
     await search(panel, "example");
     expect(panel.state.footerMode).toBe("search");
     expect(key(panel, "ArrowDown").defaultPrevented).toBe(true);
-    key(panel, "ArrowUp"); key(panel, "Tab");
+    key(panel, "ArrowUp");
+    key(panel, "Tab");
     expect(panel.state.selectedIndex).toBe(0);
     key(panel, "Enter", { ctrlKey: true });
     expect(browser.runtime.sendMessage).toHaveBeenCalledWith({ action: "navigate", type: "tab", tabId: 7 });
@@ -200,7 +216,8 @@ describe("panel controller", () => {
   });
 
   it("toggles grouping, fulltext persistence and help through shortcuts", async () => {
-    const panel = setup({ search: () => tabResults() }); await search(panel, "example");
+    const panel = setup({ search: () => tabResults() });
+    await search(panel, "example");
     key(panel, "g", { altKey: true, code: "KeyG" });
     expect(panel.elements.groupToggle.getAttribute("aria-pressed")).toBe("true");
     expect(panel.elements.results.querySelector(".qal-domain-header").textContent).toContain("example.com");
@@ -210,7 +227,8 @@ describe("panel controller", () => {
     expect(panel.elements.fulltextToggle.getAttribute("aria-pressed")).toBe(String(!before));
     expect(browser.storage.local.set).toHaveBeenCalledWith(expect.objectContaining({ qal_user_config: expect.objectContaining({ ENABLE_FULLTEXT_SEARCH: !before }) }));
     QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = before;
-    await search(panel, ""); key(panel, "?");
+    await search(panel, "");
+    key(panel, "?");
     expect(panel.state.isHelpExpanded).toBe(true);
   });
 });
@@ -252,7 +270,8 @@ describe("panel controller action boundaries", () => {
     ["get-active-tab-state", "tab state unavailable", "fetchActiveTabState"],
     ["get-web-search-state", "web search state unavailable", "fetchWebSearchState"],
   ])("logs %s failures with a caller supplied diagnostic prefix", async (action, warning, method) => {
-    const failure = new Error("Unavailable"); const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failure = new Error("Unavailable");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const panel = setup({ [action]: () => Promise.reject(failure) });
     const { createPanelController } = require("../src/panel-controller.js");
     const controller = createPanelController({ ...panel, logPrefix: "Quick TAB Launcher popup" });
@@ -268,7 +287,8 @@ describe("panel controller action boundaries", () => {
     const panel = setup({ "get-recent-tabs": () => pending.promise, search: () => tabResults() });
     const recent = panel.controller.fetchRecentTabs();
     await search(panel, "example");
-    pending.resolve({ recentActive: [{ id: 8, title: "Recent" }], recentlyClosed: [] }); await recent;
+    pending.resolve({ recentActive: [{ id: 8, title: "Recent" }], recentlyClosed: [] });
+    await recent;
     expect(panel.elements.results.textContent).toContain("Latest page");
     panel.elements.input.value = "";
     panel.hooks.isActive.mockReturnValue(false);
@@ -280,7 +300,8 @@ describe("panel controller action boundaries", () => {
   });
 
   it("refreshes a failed tab close and a failed domain close and logs both", async () => {
-    const failure = new Error("Close failed"); const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failure = new Error("Close failed");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const panel = setup({ search: () => tabResults(), "close-tab": () => Promise.reject(failure), "close-domain-tabs": () => Promise.reject(failure) });
     await search(panel, "example");
     await panel.controller.closeTab(0);
@@ -293,7 +314,8 @@ describe("panel controller action boundaries", () => {
   });
 
   it("logs undo and config failures while keeping search usable", async () => {
-    const failure = new Error("Unavailable"); const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failure = new Error("Unavailable");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const panel = setup({ search: () => tabResults(), "undo-close": () => Promise.reject(failure) });
     const before = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
     browser.storage.local.set.mockRejectedValue(failure);
