@@ -6,14 +6,14 @@
 /* global fuzzyMatch, t */
 
 const COMMANDS = [
-  { id: "close-other-tabs", icon: "\uD83D\uDDD1" },
-  { id: "close-duplicates", icon: "\uD83E\uDDF9" },
-  { id: "mute-tab", icon: "\uD83D\uDD07" },
-  { id: "unmute-tab", icon: "\uD83D\uDD0A" },
-  { id: "pin-tab", icon: "\uD83D\uDCCC" },
-  { id: "unpin-tab", icon: "\uD83D\uDCCD" },
-  { id: "duplicate-tab", icon: "\uD83D\uDCCB" },
-  { id: "sort-tabs-title", icon: "\uD83D\uDD24" },
+  { id: "close-other-tabs", icon: "trash" },
+  { id: "close-duplicates", icon: "copies" },
+  { id: "mute-tab", icon: "mute" },
+  { id: "unmute-tab", icon: "sound" },
+  { id: "pin-tab", icon: "pin" },
+  { id: "unpin-tab", icon: "unpin" },
+  { id: "duplicate-tab", icon: "duplicate" },
+  { id: "sort-tabs-title", icon: "sort" },
 ];
 
 function getCommandLabel(command) {

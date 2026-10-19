@@ -1,13 +1,17 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, createElement, renderResults, renderGroupedResults, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, createElement, renderResults, renderGroupedResults, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform */
 
 (function () {
   "use strict";
 
   const HOST_ELEMENT_ID = "qal-shadow-host";
+  const RESULTS_ELEMENT_ID = "qal-results";
+  const IS_MAC = isMacPlatform(navigator.platform);
 
   const state = {
     isVisible: false,
     isGroupedView: false,
+    footerMode: "recent",
+    isHelpExpanded: false,
     results: { tabs: [], bookmarks: [], history: [] },
     selectedIndex: -1,
     flatResults: [],
@@ -44,31 +48,41 @@
 
     const backdrop = createElement("div", "qal-backdrop");
     const panel = createElement("div", "qal-panel");
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Quick Tab Launcher");
 
     const searchContainer = createElement("div", "qal-search-container");
     const searchIcon = createElement("span", "qal-search-icon");
-    searchIcon.textContent = "\u2315";
+    const lens = createIcon("search", 18);
+    if (lens) searchIcon.appendChild(lens);
     const input = createElement("input", "qal-input");
     input.type = "text";
     input.placeholder = t("launcher.placeholder");
     input.autocomplete = "off";
     input.spellcheck = false;
-    const shortcutHint = createElement("span", "qal-shortcut-hint");
-    shortcutHint.textContent = t("launcher.escHint");
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-label", t("launcher.inputLabel"));
+    input.setAttribute("aria-controls", RESULTS_ELEMENT_ID);
+    input.setAttribute("aria-expanded", "true");
+    input.setAttribute("aria-autocomplete", "list");
 
-    const fulltextToggle = createElement("button", "qal-fulltext-toggle");
+    const groupToggle = createElement("button", "qal-toggle qal-group-toggle");
+    groupToggle.type = "button";
+    const fulltextToggle = createElement(
+      "button",
+      "qal-toggle qal-fulltext-toggle",
+    );
     fulltextToggle.type = "button";
-    fulltextToggle.textContent = t("launcher.fulltextToggle");
-    updateFulltextToggleState(fulltextToggle);
 
-    searchContainer.append(searchIcon, input, fulltextToggle, shortcutHint);
+    searchContainer.append(searchIcon, input, groupToggle, fulltextToggle);
 
     const results = createElement("div", "qal-results");
+    results.id = RESULTS_ELEMENT_ID;
     results.setAttribute("role", "listbox");
-    const footer = createFooter();
+    results.activeDescendantOwner = input;
+    const footer = createElement("div", "qal-footer");
 
-    const branding = createBranding();
-    panel.append(searchContainer, results, footer, branding);
+    panel.append(searchContainer, results, footer);
     overlay.append(backdrop, panel);
     state.shadowRoot.appendChild(overlay);
 
@@ -78,53 +92,47 @@
       input,
       results,
       footer,
-      shortcutHint,
+      groupToggle,
       fulltextToggle,
     };
+    applyOverlayTranslations();
   }
 
-  function createFooter() {
-    const footer = createElement("div", "qal-footer");
-    const keys = [
-      "launcher.footer.navigate",
-      "launcher.footer.open",
-      "launcher.footer.newTab",
-      "launcher.footer.commands",
-      "launcher.footer.group",
-      "launcher.footer.fulltext",
-      "launcher.footer.close",
-    ];
-    for (const key of keys) {
-      const span = document.createElement("span");
-      span.textContent = t(key);
-      span.dataset.i18n = key;
-      footer.appendChild(span);
-    }
-    return footer;
+  function renderFooter() {
+    renderFooterHints(state.elements.footer, {
+      mode: state.footerMode,
+      expanded: state.isHelpExpanded,
+      isMac: IS_MAC,
+    });
   }
 
-  function createBranding() {
-    const div = createElement("div", "qal-branding");
-    div.textContent = "Quick Tab Launcher by ";
-    const link = document.createElement("a");
-    link.href = "https://github.com/AndreaBonn";
-    link.target = "_blank";
-    link.rel = "noopener";
-    link.textContent = "Bonn";
-    link.addEventListener("click", (e) => e.stopPropagation());
-    div.appendChild(link);
-    return div;
+  function setFooterMode(mode) {
+    if (state.footerMode === mode) return;
+    state.footerMode = mode;
+    renderFooter();
+  }
+
+  function toggleHelp() {
+    state.isHelpExpanded = !state.isHelpExpanded;
+    renderFooter();
   }
 
   function applyOverlayTranslations() {
-    state.elements.input.placeholder = t("launcher.placeholder");
-    state.elements.shortcutHint.textContent = t("launcher.escHint");
-    state.elements.fulltextToggle.textContent = t("launcher.fulltextToggle");
-    updateFulltextToggleState(state.elements.fulltextToggle);
-    const footerSpans = state.elements.footer.querySelectorAll("[data-i18n]");
-    for (const span of footerSpans) {
-      span.textContent = t(span.dataset.i18n);
-    }
+    const { input, groupToggle, fulltextToggle } = state.elements;
+    input.placeholder = t("launcher.placeholder");
+    input.setAttribute("aria-label", t("launcher.inputLabel"));
+    groupToggle.textContent = t("launcher.groupToggle");
+    groupToggle.title = t("launcher.groupToggle.tooltip");
+    fulltextToggle.textContent = t("launcher.fulltextToggle");
+    updateGroupToggleState();
+    updateFulltextToggleState(fulltextToggle);
+    renderFooter();
+  }
+
+  function updateGroupToggleState() {
+    const btn = state.elements.groupToggle;
+    btn.classList.toggle("qal-toggle-active", state.isGroupedView);
+    btn.setAttribute("aria-pressed", String(state.isGroupedView));
   }
 
   function updateFulltextToggleState(btn) {
@@ -165,6 +173,10 @@
       "click",
       toggleFulltextSearch,
     );
+    state.elements.groupToggle.addEventListener("click", toggleGroupedView);
+    state.elements.footer.addEventListener("click", (e) => {
+      if (e.target.closest('[data-qal-action="toggle-help"]')) toggleHelp();
+    });
 
     browser.runtime.onMessage.addListener((message) => {
       if (message.action === "toggle") toggleLauncher();
@@ -190,6 +202,9 @@
     state.elements.input.value = "";
     state.selectedIndex = -1;
     state.flatResults = [];
+    state.isHelpExpanded = false;
+    state.footerMode = "recent";
+    renderFooter();
     updateFulltextToggleState(state.elements.fulltextToggle);
     renderEmpty(state.elements.results);
 
@@ -260,6 +275,7 @@
     const query = state.elements.input.value;
 
     if (!query.trim()) {
+      setFooterMode("recent");
       renderEmpty(state.elements.results);
       state.flatResults = [];
       state.selectedIndex = -1;
@@ -268,9 +284,11 @@
     }
 
     if (isCommandMode(query)) {
+      setFooterMode("commands");
       handleCommandInput(query.trimStart().slice(1));
       return;
     }
+    setFooterMode("search");
 
     state.loadingTimeout = setTimeout(() => {
       renderLoading(state.elements.results);
@@ -327,6 +345,7 @@
 
   function toggleGroupedView() {
     state.isGroupedView = !state.isGroupedView;
+    updateGroupToggleState();
     const query = state.elements.input.value;
     if (query.trim() && !isCommandMode(query)) {
       renderCurrentView(query);
@@ -343,6 +362,12 @@
     if (e.altKey && (e.key === "g" || e.key === "G")) {
       e.preventDefault();
       toggleGroupedView();
+      return;
+    }
+
+    if (e.key === "?" && !state.elements.input.value) {
+      e.preventDefault();
+      toggleHelp();
       return;
     }
 

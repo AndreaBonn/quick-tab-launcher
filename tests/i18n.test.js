@@ -151,7 +151,7 @@ describe("i18n - applyTranslations()", () => {
       '<input data-i18n-placeholder="launcher.placeholder" />';
     applyTranslations(document);
     expect(document.querySelector("input").placeholder).toBe(
-      "Cerca schede, segnalibri, cronologia o > per le azioni",
+      "Cerca schede, segnalibri, cronologia o > azioni",
     );
   });
 

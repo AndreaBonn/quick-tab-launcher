@@ -1,4 +1,6 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderResults, renderRecentTabs, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange, filterCommands, renderCommandResults */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderResults, renderRecentTabs, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange, filterCommands, renderCommandResults, createIcon, renderFooterHints, isMacPlatform, t */
+
+const IS_MAC = isMacPlatform(navigator.platform);
 
 const state = {
   results: { tabs: [], bookmarks: [], history: [] },
@@ -6,6 +8,8 @@ const state = {
   flatResults: [],
   searchTimeout: null,
   loadingTimeout: null,
+  footerMode: "recent",
+  isHelpExpanded: false,
   elements: {},
 };
 
@@ -24,12 +28,41 @@ function captureElements() {
   state.elements = {
     input: document.querySelector(".qal-input"),
     results: document.querySelector(".qal-results"),
+    footer: document.querySelector(".qal-footer"),
   };
+}
+
+function renderFooter() {
+  renderFooterHints(state.elements.footer, {
+    mode: state.footerMode,
+    expanded: state.isHelpExpanded,
+    isMac: IS_MAC,
+  });
+}
+
+function setFooterMode(mode) {
+  if (state.footerMode === mode) return;
+  state.footerMode = mode;
+  renderFooter();
+}
+
+function toggleHelp() {
+  state.isHelpExpanded = !state.isHelpExpanded;
+  renderFooter();
 }
 
 function init() {
   captureElements();
-  const { input, results } = state.elements;
+  const { input, results, footer } = state.elements;
+
+  const lens = createIcon("search", 18);
+  if (lens) document.querySelector(".qal-search-icon").appendChild(lens);
+  input.setAttribute("aria-label", t("launcher.inputLabel"));
+  results.activeDescendantOwner = input;
+  renderFooter();
+  footer.addEventListener("click", (e) => {
+    if (e.target.closest('[data-qal-action="toggle-help"]')) toggleHelp();
+  });
 
   renderEmpty(results);
   input.focus();
@@ -84,6 +117,7 @@ function handleInput() {
   const query = state.elements.input.value;
 
   if (!query.trim()) {
+    setFooterMode("recent");
     renderEmpty(state.elements.results);
     state.flatResults = [];
     state.selectedIndex = -1;
@@ -92,6 +126,7 @@ function handleInput() {
   }
 
   if (isCommandMode(query)) {
+    setFooterMode("commands");
     const commands = filterCommands(query.trimStart().slice(1));
     state.flatResults = commands.map((cmd) => ({ ...cmd, type: "command" }));
     state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
@@ -103,6 +138,7 @@ function handleInput() {
     );
     return;
   }
+  setFooterMode("search");
 
   state.loadingTimeout = setTimeout(() => {
     renderLoading(state.elements.results);
@@ -133,6 +169,11 @@ function handleInput() {
 }
 
 function handleKeydown(e) {
+  if (e.key === "?" && !state.elements.input.value) {
+    e.preventDefault();
+    toggleHelp();
+    return;
+  }
   switch (e.key) {
     case "ArrowDown":
     case "Tab":
@@ -257,6 +298,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   onLocaleChange(() => {
     applyTranslations(document);
+    state.elements.input.setAttribute("aria-label", t("launcher.inputLabel"));
+    renderFooter();
     renderEmpty(state.elements.results);
   });
 });

@@ -113,6 +113,7 @@ async function loadLauncher(browserMock) {
   globalThis.renderError = renderError;
   globalThis.updateSelection = updateSelection;
   globalThis.reindexItems = reindexItems;
+  Object.assign(globalThis, require("../src/icons.js"), require("../src/hints.js"));
 
   let capturedShadowRoot = null;
   const originalAttachShadow = HTMLElement.prototype.attachShadow;
@@ -544,13 +545,94 @@ describe("launcher.js - footer hints", () => {
     delete globalThis.browser;
   });
 
-  it("includes command hint in footer", () => {
+  it("shows the actions hint while nothing is typed", () => {
     const footer = shadowRoot.querySelector(".qal-footer");
-    expect(footer.textContent).toContain(t("launcher.footer.commands"));
+    expect(footer.textContent).toContain(t("hints.actions"));
+    expect(footer.textContent).not.toContain(t("hints.fulltext"));
   });
 
-  it("includes group hint in footer", () => {
+  it("switches to search hints once the user types", async () => {
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, "git");
     const footer = shadowRoot.querySelector(".qal-footer");
-    expect(footer.textContent).toContain(t("launcher.footer.group"));
+    expect(footer.textContent).toContain(t("hints.group"));
+    expect(footer.textContent).toContain(t("hints.open"));
+  });
+
+  it("switches to command hints in command mode", async () => {
+    const input = shadowRoot.querySelector(".qal-input");
+    await typeAndFlush(input, ">");
+    const footer = shadowRoot.querySelector(".qal-footer");
+    expect(footer.textContent).toContain(t("hints.run"));
+  });
+
+  it("? on an empty field lists every shortcut instead of typing", () => {
+    const input = shadowRoot.querySelector(".qal-input");
+    const event = new KeyboardEvent("keydown", { key: "?", cancelable: true });
+    input.dispatchEvent(event);
+    const footer = shadowRoot.querySelector(".qal-footer");
+    expect(event.defaultPrevented).toBe(true);
+    expect(footer.textContent).toContain(t("hints.fulltext"));
+  });
+
+  it("? inside a query is typed normally", () => {
+    const input = shadowRoot.querySelector(".qal-input");
+    input.value = "what";
+    const event = new KeyboardEvent("keydown", { key: "?", cancelable: true });
+    input.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("the help button in the footer expands and collapses the list", () => {
+    const footer = shadowRoot.querySelector(".qal-footer");
+    footer.querySelector('[data-qal-action="toggle-help"]').click();
+    expect(footer.textContent).toContain(t("hints.fulltext"));
+    footer.querySelector('[data-qal-action="toggle-help"]').click();
+    expect(footer.textContent).not.toContain(t("hints.fulltext"));
+  });
+});
+
+describe("launcher.js - panel chrome", () => {
+  let shadowRoot;
+
+  beforeEach(async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    ({ shadowRoot } = await loadLauncher(createBrowserMock()));
+  });
+
+  afterEach(() => {
+    const host = document.getElementById("qal-shadow-host");
+    if (host) host.remove();
+    delete globalThis.browser;
+  });
+
+  it("has no duplicate ESC hint and no branding row in the panel", () => {
+    expect(shadowRoot.querySelector(".qal-shortcut-hint")).toBeNull();
+    expect(shadowRoot.querySelector(".qal-branding")).toBeNull();
+    expect(shadowRoot.querySelector(".qal-footer")).not.toBeNull();
+  });
+
+  it("labels the search field for screen readers", () => {
+    const input = shadowRoot.querySelector(".qal-input");
+    expect(input.getAttribute("aria-label")).toBe(t("launcher.inputLabel"));
+    expect(input.getAttribute("aria-controls")).toBe("qal-results");
+  });
+
+  it("the By site button toggles grouped view and shows its state", () => {
+    const btn = shadowRoot.querySelector(".qal-group-toggle");
+    expect(btn.getAttribute("aria-pressed")).toBe("false");
+    btn.click();
+    expect(btn.getAttribute("aria-pressed")).toBe("true");
+    const input = shadowRoot.querySelector(".qal-input");
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "g", altKey: true, cancelable: true }),
+    );
+    expect(btn.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("draws the search icon as svg, not a glyph", () => {
+    const icon = shadowRoot.querySelector(".qal-search-icon");
+    expect(icon.querySelector("svg")).not.toBeNull();
+    expect(icon.textContent).toBe("");
   });
 });

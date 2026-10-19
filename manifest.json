@@ -51,6 +51,8 @@
         "src/fuzzy.js",
         "src/i18n.js",
         "src/commands.js",
+        "src/icons.js",
+        "src/hints.js",
         "src/render-utils.js",
         "content/launcher.js"
       ],

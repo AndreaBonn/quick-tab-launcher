@@ -4,34 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Quick Tab Launcher</title>
+    <link rel="stylesheet" href="../content/launcher.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
-  <body>
-    <div class="qal-panel">
-      <div class="qal-search-container">
-        <span class="qal-search-icon">&#x2315;</span>
-        <input
-          type="text"
-          class="qal-input"
-          data-i18n-placeholder="launcher.placeholder"
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <span class="qal-shortcut-hint" data-i18n="launcher.escHint"></span>
-      </div>
-      <div class="qal-results" role="listbox"></div>
-      <div class="qal-footer">
-        <span data-i18n="launcher.footer.navigate"></span>
-        <span data-i18n="launcher.footer.open"></span>
-        <span data-i18n="launcher.footer.newTab"></span>
-        <span data-i18n="launcher.footer.commands"></span>
-        <span data-i18n="launcher.footer.close"></span>
-      </div>
-      <div class="qal-branding">
-        Quick Tab Launcher by
-        <a href="https://github.com/AndreaBonn" target="_blank" rel="noopener"
-          >Bonn</a
-        >
+  <body class="qal-popup">
+    <div class="qal-overlay">
+      <div class="qal-panel">
+        <div class="qal-search-container">
+          <span class="qal-search-icon"></span>
+          <input
+            type="text"
+            class="qal-input"
+            data-i18n-placeholder="launcher.placeholder"
+            autocomplete="off"
+            spellcheck="false"
+            role="combobox"
+            aria-controls="qal-results"
+            aria-expanded="true"
+            aria-autocomplete="list"
+          />
+        </div>
+        <div class="qal-results" id="qal-results" role="listbox"></div>
+        <div class="qal-footer"></div>
       </div>
     </div>
 
@@ -40,6 +34,8 @@
     <script src="../src/fuzzy.js"></script>
     <script src="../src/i18n.js"></script>
     <script src="../src/commands.js"></script>
+    <script src="../src/icons.js"></script>
+    <script src="../src/hints.js"></script>
     <script src="../src/render-utils.js"></script>
     <script src="popup.js"></script>
   </body>

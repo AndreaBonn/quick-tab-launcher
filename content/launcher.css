@@ -16,13 +16,11 @@
   --qal-border: #e1e4e8;
   --qal-text-primary: #24292f;
   --qal-text-secondary: #57606a;
-  --qal-text-url: #0969da;
   --qal-accent: #0969da;
+  --qal-on-accent: #ffffff;
   --qal-hover: #f3f4f6;
   --qal-selected: #dbeafe;
   --qal-selected-border: #0969da;
-  --qal-highlight-bg: #fef08a;
-  --qal-highlight-text: #1a1a1a;
   --qal-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
   --qal-radius: 12px;
   --qal-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -46,13 +44,11 @@
     --qal-border: #3d4147;
     --qal-text-primary: #e6edf3;
     --qal-text-secondary: #8b949e;
-    --qal-text-url: #58a6ff;
     --qal-accent: #58a6ff;
+    --qal-on-accent: #0d1117;
     --qal-hover: #2d3139;
     --qal-selected: #1d3454;
     --qal-selected-border: #58a6ff;
-    --qal-highlight-bg: #5a4a00;
-    --qal-highlight-text: #fef08a;
     --qal-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
     --qal-warning: #f59e0b;
     --qal-warning-bg: #422006;
@@ -105,13 +101,14 @@
 }
 
 .qal-search-icon {
-  font-size: 18px;
+  display: inline-flex;
   color: var(--qal-text-secondary);
   flex-shrink: 0;
 }
 
 .qal-input {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -124,7 +121,7 @@
   color: var(--qal-text-secondary);
 }
 
-.qal-fulltext-toggle {
+.qal-toggle {
   font-size: 11px;
   color: var(--qal-text-secondary);
   background: transparent;
@@ -142,26 +139,28 @@
   line-height: 1.2;
 }
 
-.qal-fulltext-toggle:hover {
+.qal-toggle:hover {
   background: var(--qal-hover);
   color: var(--qal-text-primary);
 }
 
-.qal-fulltext-toggle.qal-fulltext-active {
+.qal-toggle.qal-fulltext-active,
+.qal-toggle.qal-toggle-active {
   background: var(--qal-accent);
-  color: #ffffff;
+  color: var(--qal-on-accent);
   border-color: var(--qal-accent);
 }
 
-.qal-fulltext-toggle.qal-fulltext-active:hover {
+.qal-toggle.qal-fulltext-active:hover,
+.qal-toggle.qal-toggle-active:hover {
   opacity: 0.85;
 }
 
-.qal-shortcut-hint {
-  font-size: 11px;
-  color: var(--qal-text-secondary);
-  white-space: nowrap;
-  flex-shrink: 0;
+.qal-toggle:focus-visible,
+.qal-close-tab:focus-visible,
+.qal-hint:focus-visible {
+  outline: 2px solid var(--qal-accent);
+  outline-offset: 2px;
 }
 
 .qal-results {
@@ -169,6 +168,10 @@
   overflow-y: auto;
   padding: 8px 0;
   max-height: 380px;
+}
+
+.qal-section-icon {
+  display: inline-flex;
 }
 
 .qal-section-header {
@@ -198,10 +201,27 @@
   transition: background 0.1s;
 }
 
-.qal-result-item:hover,
+.qal-result-item:hover {
+  background: var(--qal-hover);
+}
+
 .qal-result-item.qal-selected {
   background: var(--qal-selected);
   border-left-color: var(--qal-selected-border);
+  box-shadow: inset 0 0 0 1px var(--qal-selected-border);
+}
+
+.qal-enter-hint {
+  display: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--qal-accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.qal-result-item.qal-selected .qal-enter-hint {
+  display: inline;
 }
 
 .qal-result-item:hover .qal-close-tab {
@@ -243,17 +263,24 @@
 
 .qal-result-url {
   font-size: 12px;
-  color: var(--qal-text-url);
+  color: var(--qal-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.qal-url-domain {
+  color: var(--qal-text-primary);
+  opacity: 0.85;
+}
+
 .qal-highlight {
-  background: var(--qal-highlight-bg);
-  color: var(--qal-highlight-text);
-  border-radius: 2px;
-  padding: 0 1px;
+  background: none;
+  color: var(--qal-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 .qal-window-badge,
@@ -277,12 +304,13 @@
 
 .qal-close-tab {
   opacity: 0;
+  display: inline-flex;
   background: none;
   border: none;
   cursor: pointer;
   font-size: 14px;
   color: var(--qal-text-secondary);
-  padding: 2px 6px;
+  padding: 3px;
   border-radius: 4px;
   transition:
     opacity 0.1s,
@@ -319,27 +347,38 @@
   color: var(--qal-text-secondary);
 }
 
-.qal-footer span {
-  display: flex;
+.qal-hint {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  white-space: nowrap;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
 }
 
-.qal-branding {
+button.qal-hint {
+  cursor: pointer;
+  margin-left: auto;
+}
+
+button.qal-hint:hover {
+  color: var(--qal-text-primary);
+}
+
+.qal-kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  font: 600 10.5px/16px var(--qal-font);
   text-align: center;
-  padding: 4px 16px 6px;
-  font-size: 10px;
-  color: var(--qal-text-secondary);
-  opacity: 0.6;
-}
-
-.qal-branding a {
-  color: var(--qal-accent);
-  text-decoration: none;
-}
-
-.qal-branding a:hover {
-  text-decoration: underline;
+  color: var(--qal-text-primary);
+  background: var(--qal-bg-panel);
+  border: 1px solid var(--qal-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
 }
 
 /* --- Command palette --- */
@@ -349,11 +388,11 @@
 }
 
 .qal-command-icon {
-  font-size: 18px;
+  display: inline-flex;
+  justify-content: center;
   width: 24px;
-  text-align: center;
   flex-shrink: 0;
-  line-height: 1;
+  color: var(--qal-text-secondary);
 }
 
 /* --- Duplicate banner --- */
@@ -463,4 +502,26 @@
 
 .qal-domain-group.qal-collapsed .qal-domain-header {
   opacity: 0.6;
+}
+
+/* --- Toolbar popup: same panel, laid out in the page flow --- */
+
+.qal-popup .qal-overlay {
+  position: static;
+}
+
+.qal-popup .qal-input {
+  font-size: 15px;
+}
+
+.qal-popup .qal-panel {
+  position: static;
+  transform: none;
+  width: 400px;
+  max-width: none;
+  max-height: 500px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
 }

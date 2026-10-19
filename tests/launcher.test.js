@@ -99,6 +99,7 @@ async function loadLauncher(browserMock) {
   globalThis.renderError = renderError;
   globalThis.updateSelection = updateSelection;
   globalThis.reindexItems = reindexItems;
+  Object.assign(globalThis, require("../src/icons.js"), require("../src/hints.js"));
 
   let capturedShadowRoot = null;
   const originalAttachShadow = HTMLElement.prototype.attachShadow;

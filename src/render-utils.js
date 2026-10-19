@@ -1,4 +1,4 @@
-/* global escapeHtml, highlightMatch, formatUrl, fuzzyMatch, highlightFuzzyMatch, groupTabsByDomain, t */
+/* global escapeHtml, highlightMatch, formatUrl, fuzzyMatch, highlightFuzzyMatch, groupTabsByDomain, t, createIcon */
 
 const INITIAL_COLORS = [
   "#e06c75",
@@ -13,12 +13,22 @@ const INITIAL_COLORS = [
 
 const SECTION_KEYS = ["tabs", "bookmarks", "history"];
 const SECTION_ICONS = {
-  tabs: "\uD83D\uDCC2",
-  bookmarks: "\u2B50",
-  history: "\uD83D\uDD52",
-  "recent-active": "\uD83D\uDD52",
-  "recent-closed": "\uD83D\uDCCB",
-  commands: "\u26A1",
+  tabs: "tabs",
+  bookmarks: "star",
+  history: "clock",
+  "recent-active": "tabs",
+  "recent-closed": "restore",
+  commands: "bolt",
+};
+
+// What Enter does on a row, shown on the selected one.
+const ENTER_HINT_KEYS = {
+  tabs: "enterHint.tab",
+  "recent-active": "enterHint.tab",
+  "recent-closed": "enterHint.reopen",
+  bookmarks: "enterHint.open",
+  history: "enterHint.open",
+  command: "enterHint.run",
 };
 
 function createElement(tag, className) {
@@ -27,10 +37,22 @@ function createElement(tag, className) {
   return el;
 }
 
+function appendIcon(parent, name) {
+  const icon = typeof createIcon === "function" ? createIcon(name) : null;
+  if (icon) parent.appendChild(icon);
+}
+
+function createEnterHint(kind) {
+  const hint = createElement("span", "qal-enter-hint");
+  hint.setAttribute("aria-hidden", "true");
+  hint.textContent = "\u21B5 " + t(ENTER_HINT_KEYS[kind]);
+  return hint;
+}
+
 function createSectionHeader(sectionKey, count) {
   const header = createElement("div", "qal-section-header");
   const icon = createElement("span", "qal-section-icon");
-  icon.textContent = SECTION_ICONS[sectionKey] || "";
+  appendIcon(icon, SECTION_ICONS[sectionKey]);
   const title = createElement("span", "qal-section-title");
   title.textContent = t(`sections.${sectionKey}`);
   const countEl = createElement("span", "qal-section-count");
@@ -98,7 +120,13 @@ function createResultText(item, query) {
   const titleEl = createElement("span", "qal-result-title");
   titleEl.innerHTML = fuzzyHighlightOrFallback(item.title || "", query);
   const urlEl = createElement("span", "qal-result-url");
-  urlEl.innerHTML = fuzzyHighlightOrFallback(formatUrl(item.url || ""), query);
+  const url = formatUrl(item.url || "");
+  const domain = url.split("/")[0];
+  const domainEl = createElement("span", "qal-url-domain");
+  domainEl.innerHTML = fuzzyHighlightOrFallback(domain, query);
+  const pathEl = createElement("span", "qal-url-path");
+  pathEl.innerHTML = fuzzyHighlightOrFallback(url.slice(domain.length), query);
+  urlEl.append(domainEl, pathEl);
   container.append(titleEl, urlEl);
   return container;
 }
@@ -127,11 +155,15 @@ function createResultItem(item, sectionKey, query, index) {
     badge.textContent = t("badges.otherWindow");
     el.appendChild(badge);
   }
+  if (ENTER_HINT_KEYS[sectionKey]) el.appendChild(createEnterHint(sectionKey));
   if (sectionKey === "tabs") {
     const actions = createElement("div", "qal-result-actions");
     const closeBtn = createElement("button", "qal-close-tab");
-    closeBtn.textContent = "\u2715";
+    closeBtn.type = "button";
+    appendIcon(closeBtn, "close");
+    if (!closeBtn.firstChild) closeBtn.textContent = "\u2715";
     closeBtn.title = t("badges.closeTab");
+    closeBtn.setAttribute("aria-label", t("badges.closeTab"));
     actions.appendChild(closeBtn);
     el.appendChild(actions);
   }
@@ -248,18 +280,18 @@ function renderCommandResults(container, commands, query, selectedIndex) {
     el.dataset.index = i;
 
     const icon = createElement("span", "qal-command-icon");
-    icon.textContent = cmd.icon;
+    appendIcon(icon, cmd.icon);
     const textContainer = createElement("div", "qal-result-text");
     const label = createElement("span", "qal-result-title");
     label.innerHTML =
       cmd.matchIndices && typeof highlightFuzzyMatch === "function"
         ? highlightFuzzyMatch(cmd.label, cmd.matchIndices)
         : escapeHtml(cmd.label);
-    const desc = createElement("span", "qal-result-url");
+    const desc = createElement("span", "qal-result-url qal-command-desc");
     desc.textContent = cmd.description;
     textContainer.append(label, desc);
 
-    el.append(icon, textContainer);
+    el.append(icon, textContainer, createEnterHint("command"));
     section.appendChild(el);
   }
 
@@ -356,10 +388,18 @@ function updateSelection(container, selectedIndex) {
   const items = container.querySelectorAll(".qal-result-item");
   for (let i = 0; i < items.length; i++) {
     const isSelected = i === selectedIndex;
+    items[i].id = `qal-option-${i}`;
     items[i].classList.toggle("qal-selected", isSelected);
     items[i].setAttribute("aria-selected", String(isSelected));
   }
   const selected = items[selectedIndex];
+  // The focused input announces the active row to screen readers; the caller
+  // links it by setting `activeDescendantOwner` on the results container.
+  const owner = container.activeDescendantOwner;
+  if (owner) {
+    if (selected) owner.setAttribute("aria-activedescendant", selected.id);
+    else owner.removeAttribute("aria-activedescendant");
+  }
   if (selected?.scrollIntoView) {
     selected.scrollIntoView({ block: "nearest" });
   }
