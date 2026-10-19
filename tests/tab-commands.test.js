@@ -263,6 +263,43 @@ describe("closeDomainTabs", () => {
   });
 });
 
+describe("mapRecentlyClosedTabs", () => {
+  it("filters window sessions and maps tab fields with their fallbacks in order", () => {
+    const { mapRecentlyClosedTabs } = require("../background/tab-commands.js");
+    const sessions = [
+      { window: { sessionId: "window-1" } },
+      {
+        tab: {
+          sessionId: "session-1",
+          title: "Closed tab",
+          url: "https://closed.com",
+          favIconUrl: "https://closed.com/icon.png",
+        },
+      },
+      { tab: { sessionId: "", url: "https://fallback.com" } },
+      { tab: {} },
+    ];
+
+    expect(mapRecentlyClosedTabs(sessions)).toEqual([
+      {
+        id: "session-1",
+        title: "Closed tab",
+        url: "https://closed.com",
+        favIconUrl: "https://closed.com/icon.png",
+        sessionId: "session-1",
+      },
+      {
+        id: "https://fallback.com",
+        title: "",
+        url: "https://fallback.com",
+        favIconUrl: null,
+        sessionId: "",
+      },
+      { id: undefined, title: "", url: "", favIconUrl: null, sessionId: undefined },
+    ]);
+  });
+});
+
 describe("getRecentTabs", () => {
   let mod;
 

@@ -125,6 +125,18 @@ async function closeDomainTabs(domain) {
   return { closed: toClose.length };
 }
 
+function mapRecentlyClosedTabs(sessions) {
+  return sessions
+    .filter((s) => s.tab)
+    .map((s) => ({
+      id: s.tab.sessionId || s.tab.url,
+      title: s.tab.title || "",
+      url: s.tab.url || "",
+      favIconUrl: s.tab.favIconUrl || null,
+      sessionId: s.tab.sessionId,
+    }));
+}
+
 /**
  * Recent tabs and recently closed ones for the empty launcher.
  *
@@ -147,17 +159,7 @@ async function getRecentTabs(excludeTabId) {
     ),
     browser.sessions
       .getRecentlyClosed({ maxResults: 8 })
-      .then((sessions) =>
-        sessions
-          .filter((s) => s.tab)
-          .map((s) => ({
-            id: s.tab.sessionId || s.tab.url,
-            title: s.tab.title || "",
-            url: s.tab.url || "",
-            favIconUrl: s.tab.favIconUrl || null,
-            sessionId: s.tab.sessionId,
-          })),
-      )
+      .then(mapRecentlyClosedTabs)
       .catch(() => []),
   ]);
 
@@ -250,6 +252,7 @@ if (typeof module !== "undefined" && module.exports) {
     sortTabsByTitle,
     closeDomainTabs,
     getRecentTabs,
+    mapRecentlyClosedTabs,
     restoreSession,
     getDuplicateSummary,
     previewCommand,

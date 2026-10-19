@@ -34,10 +34,6 @@ export default [
     },
   },
   {
-    files: ["background/tab-commands.js"],
-    rules: { "max-lines-per-function": "off" },
-  },
-  {
     // The locale dictionary remains cohesive; options will be decomposed separately.
     files: ["src/i18n.js", "options/options.js"],
     rules: { "max-lines": "off" },
