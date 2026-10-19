@@ -309,3 +309,58 @@ describe("panel controller action boundaries", () => {
     QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = before;
   });
 });
+
+describe("panel controller guards", () => {
+  beforeEach(() => { vi.useFakeTimers(); setLocaleFromStorage("en"); });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); document.body.replaceChildren(); delete globalThis.browser; });
+
+  const sentActions = () => browser.runtime.sendMessage.mock.calls.map(([message]) => message.action);
+
+  it("does not repeat Alt+W for a held key once the first close has completed", async () => {
+    const panel = setup({ search: () => tabResults(), "close-tab": { closed: 0 } });
+    await search(panel, "example");
+    key(panel, "w", { altKey: true, code: "KeyW" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(panel.state.isClosingTab).toBe(false);
+    key(panel, "w", { altKey: true, code: "KeyW", repeat: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sentActions().filter((action) => action === "close-tab")).toHaveLength(1);
+    key(panel, "w", { altKey: true, code: "KeyW" });
+    expect(sentActions().filter((action) => action === "close-tab")).toHaveLength(2);
+  });
+
+  it.each([0, -1])("sends no undo message for a count of %i", async (count) => {
+    const panel = setup();
+    await panel.controller.requestUndo(count);
+    expect(sentActions()).not.toContain("undo-close");
+    await panel.controller.requestUndo(2);
+    expect(browser.runtime.sendMessage).toHaveBeenCalledWith({ action: "undo-close", count: 2 });
+  });
+
+  it("never shows the loading state after a fast reply has been rendered", async () => {
+    const panel = setup({ search: () => tabResults() });
+    await search(panel, "example");
+    expect(panel.elements.results.textContent).toContain("Latest page");
+    await vi.advanceTimersByTimeAsync(QAL_CONFIG.LOADING_THRESHOLD_MS * 2);
+    expect(panel.elements.results.textContent).toContain("Latest page");
+    expect(panel.elements.results.textContent).not.toContain(t("states.loading"));
+  });
+
+  it("does not fetch or render when refreshing an inactive host", async () => {
+    const panel = setup({ search: () => tabResults(), "get-recent-tabs": { recentActive: [{ id: 1, title: "Recent" }], recentlyClosed: [] } });
+    await search(panel, "example");
+    const before = panel.elements.results.innerHTML;
+    browser.runtime.sendMessage.mockClear();
+    panel.hooks.isActive.mockReturnValue(false);
+    panel.controller.refreshCurrentView();
+    panel.elements.input.value = "";
+    panel.controller.refreshCurrentView();
+    await vi.advanceTimersByTimeAsync(QAL_CONFIG.DEBOUNCE_MS);
+    expect(browser.runtime.sendMessage).not.toHaveBeenCalled();
+    expect(panel.elements.results.innerHTML).toBe(before);
+    panel.hooks.isActive.mockReturnValue(true);
+    panel.controller.refreshCurrentView();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sentActions()).toContain("get-recent-tabs");
+  });
+});
