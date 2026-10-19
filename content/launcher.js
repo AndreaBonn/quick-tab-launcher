@@ -1,4 +1,4 @@
-/* global createPanelState, createPanelView, isCommandMode, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, filterCommands, loadUserConfig, saveUserConfig, createIcon, isAltShortcut, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
+/* global createPanelState, createPanelView, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderDuplicateBanner, renderEmpty, filterCommands, createIcon, tCount, renderGuide, renderQuickActions, buildToast, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide, createPanelController */
 
 (function () {
   "use strict";
@@ -14,7 +14,6 @@
     "pin-tab",
     "unpin-tab",
   ];
-  const CLOSABLE_TYPES = ["tab", "recent-active"];
 
   const state = {
     ...createPanelState(),
@@ -28,6 +27,7 @@
   };
 
   let panelView;
+  let panelController;
 
   function init() {
     if (document.getElementById(HOST_ELEMENT_ID)) return;
@@ -142,7 +142,31 @@
       pageToastSlot,
     };
     panelView = createPanelView({ state, elements: state.elements });
+    setupPanelController();
     applyOverlayTranslations();
+  }
+
+  function setupPanelController() {
+    panelController = createPanelController({
+      state, elements: state.elements,
+      hooks: {
+        isActive: () => state.isVisible,
+        close: closeLauncher,
+        afterNavigate: (item) => {
+          if (["recent-closed", "web-search"].includes(item.type)) closeLauncher();
+        },
+        runCommand,
+        onNothingToConfirm: () => {
+          closeLauncher();
+          showPageToast(t("done.nothing"));
+        },
+        onQueryChange: (query) => {
+          state.elements.quickActions.hidden = Boolean(query.trim());
+          state.elements.duplicatesSlot.hidden = Boolean(query.trim());
+        },
+        onActiveTabState: () => renderQuickActions(state.elements.quickActions, quickCommands()),
+      },
+    });
   }
 
   function applyOverlayTranslations() {
@@ -154,56 +178,20 @@
     groupToggle.textContent = t("launcher.groupToggle");
     groupToggle.title = t("launcher.groupToggle.tooltip");
     fulltextToggle.textContent = t("launcher.fulltextToggle");
-    updateGroupToggleState();
-    updateFulltextToggleState(fulltextToggle);
+    panelController.updateToggleStates();
     panelView.renderFooter();
-  }
-
-  function updateGroupToggleState() {
-    const btn = state.elements.groupToggle;
-    btn.classList.toggle("qal-toggle-active", state.isGroupedView);
-    btn.setAttribute("aria-pressed", String(state.isGroupedView));
-  }
-
-  function updateFulltextToggleState(btn) {
-    const isOn = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
-    btn.classList.toggle("qal-fulltext-active", isOn);
-    const tooltipKey = isOn
-      ? "launcher.fulltextToggle.tooltip.on"
-      : "launcher.fulltextToggle.tooltip.off";
-    btn.title = t(tooltipKey);
-    btn.setAttribute("aria-pressed", String(isOn));
-  }
-
-  async function toggleFulltextSearch() {
-    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = !QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
-    updateFulltextToggleState(state.elements.fulltextToggle);
-    try {
-      const stored = await loadUserConfig();
-      stored.ENABLE_FULLTEXT_SEARCH = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
-      await saveUserConfig(stored);
-    } catch (err) {
-      console.warn("Quick TAB Launcher: config save failed", err);
-    }
-    retriggerSearch();
-  }
-
-  function retriggerSearch() {
-    const query = state.elements.input.value;
-    if (!query.trim()) return;
-    handleInput();
   }
 
   function setupListeners() {
     state.elements.backdrop.addEventListener("click", closeLauncher);
-    state.elements.input.addEventListener("input", handleInput);
-    state.elements.input.addEventListener("keydown", handleKeydown);
-    state.elements.results.addEventListener("click", handleResultClick);
+    state.elements.input.addEventListener("input", panelController.handleInput);
+    state.elements.input.addEventListener("keydown", panelController.handleKeydown);
+    state.elements.results.addEventListener("click", panelController.handleResultClick);
     state.elements.fulltextToggle.addEventListener(
       "click",
-      toggleFulltextSearch,
+      panelController.toggleFulltextSearch,
     );
-    state.elements.groupToggle.addEventListener("click", toggleGroupedView);
+    state.elements.groupToggle.addEventListener("click", panelController.toggleGroupedView);
     state.elements.panel.addEventListener("click", handlePanelAction);
     state.elements.duplicatesSlot.addEventListener("click", handleBannerClick);
     state.elements.pageToastSlot.addEventListener("click", (e) => {
@@ -232,7 +220,7 @@
     state.isHelpExpanded = false;
     state.footerMode = "recent";
     panelView.renderFooter();
-    updateFulltextToggleState(state.elements.fulltextToggle);
+    panelController.updateToggleStates();
     panelView.clearPendingConfirm();
     panelView.hidePanelToast();
     renderEmpty(state.elements.results);
@@ -241,10 +229,10 @@
     state.elements.duplicatesSlot.hidden = false;
     renderQuickActions(state.elements.quickActions, quickCommands());
 
-    fetchRecentTabs();
+    panelController.fetchRecentTabs();
     checkDuplicates();
-    fetchActiveTabState();
-    fetchWebSearchState();
+    panelController.fetchActiveTabState();
+    panelController.fetchWebSearchState();
     showGuideIfNeeded();
 
     requestAnimationFrame(() => {
@@ -264,33 +252,6 @@
     state.flatResults = [];
     state.pendingConfirmId = null;
     panelView.hidePanelToast();
-  }
-
-  async function fetchRecentTabs(preferredIndex = 0) {
-    try {
-      const recentData = await browser.runtime.sendMessage({
-        action: "get-recent-tabs",
-      });
-      if (!state.isVisible || state.elements.input.value.trim()) return;
-      renderRecentTabs(state.elements.results, recentData);
-      state.flatResults = [
-        ...recentData.recentActive.map((item) => ({
-          ...item,
-          type: "recent-active",
-        })),
-        ...recentData.recentlyClosed.map((item) => ({
-          ...item,
-          type: "recent-closed",
-        })),
-      ];
-      const last = state.flatResults.length - 1;
-      state.selectedIndex = Math.min(preferredIndex, last);
-      if (state.selectedIndex >= 0) {
-        updateSelection(state.elements.results, state.selectedIndex);
-      }
-    } catch (err) {
-      console.warn("Quick TAB Launcher: recent tabs unavailable", err);
-    }
   }
 
   function duplicateSignature(summary) {
@@ -330,35 +291,9 @@
       });
       const closed = result?.closed ?? 0;
       panelView.showPanelToast(tCount("done.close-duplicates", closed), closed);
-      refreshCurrentView();
+      panelController.refreshCurrentView();
     } catch (err) {
       console.warn("Quick TAB Launcher: closing duplicates failed", err);
-    }
-  }
-
-  async function fetchActiveTabState() {
-    try {
-      state.activeTabState = await browser.runtime.sendMessage({
-        action: "get-active-tab-state",
-      });
-    } catch (err) {
-      state.activeTabState = null;
-      console.warn("Quick TAB Launcher: tab state unavailable", err);
-    }
-    if (state.isVisible) {
-      renderQuickActions(state.elements.quickActions, quickCommands());
-    }
-  }
-
-  async function fetchWebSearchState() {
-    try {
-      const reply = await browser.runtime.sendMessage({
-        action: "get-web-search-state",
-      });
-      state.webSearchEnabled = Boolean(reply?.enabled);
-    } catch (err) {
-      state.webSearchEnabled = false;
-      console.warn("Quick TAB Launcher: web search state unavailable", err);
     }
   }
 
@@ -398,19 +333,19 @@
     else if (action === "dismiss-guide") hideGuideForGood();
     else if (action === "run-command") runCommand(target.dataset.commandId);
     else if (action === "show-commands") showCommandMode();
-    else if (action === "undo") undoLastClose();
+    else if (action === "undo") panelController.undoLastClose();
     else if (action === "enable-fulltext") enableFulltextSearch();
     else if (action === "open-options") openOptions();
   }
 
   function showCommandMode() {
     state.elements.input.value = ">";
-    handleInput();
+    panelController.handleInput();
     state.elements.input.focus();
   }
 
   function enableFulltextSearch() {
-    if (!QAL_CONFIG.ENABLE_FULLTEXT_SEARCH) toggleFulltextSearch();
+    if (!QAL_CONFIG.ENABLE_FULLTEXT_SEARCH) panelController.toggleFulltextSearch();
   }
 
   function openOptions() {
@@ -431,110 +366,11 @@
     }, PAGE_TOAST_MS);
   }
 
-  async function requestUndo(count) {
-    if (count <= 0) return;
-    try {
-      await browser.runtime.sendMessage({ action: "undo-close", count });
-    } catch (err) {
-      console.warn("Quick TAB Launcher: undo failed", err);
-    }
-  }
-
-  async function undoLastClose() {
-    const count = state.panelUndoCount;
-    panelView.hidePanelToast();
-    await requestUndo(count);
-    refreshCurrentView();
-  }
-
   async function undoFromPage() {
     const count = state.pageUndoCount;
     state.pageUndoCount = 0;
     state.elements.pageToastSlot.replaceChildren();
-    await requestUndo(count);
-  }
-
-  function refreshCurrentView(preferredIndex = 0) {
-    if (!state.isVisible) return;
-    if (state.elements.input.value.trim()) retriggerSearch();
-    else fetchRecentTabs(preferredIndex);
-  }
-
-  async function closeTabFromPanel(index) {
-    const item = state.flatResults[index];
-    if (!item || !CLOSABLE_TYPES.includes(item.type)) return;
-    if (state.isClosingTab) return;
-    state.isClosingTab = true;
-    // Capture the row before the await: the list may be re-rendered meanwhile.
-    const itemEl = state.elements.results.querySelector(
-      `.qal-result-item[data-index="${index}"]`,
-    );
-    let closed = 0;
-    try {
-      const result = await browser.runtime.sendMessage({
-        action: "close-tab",
-        tabId: item.id,
-      });
-      closed = result?.closed ?? 0;
-    } catch (err) {
-      console.warn("Quick TAB Launcher: close failed", err);
-    } finally {
-      state.isClosingTab = false;
-    }
-    if (closed === 0) {
-      refreshCurrentView(index);
-      return;
-    }
-    panelView.showPanelToast(t("toast.tabClosed", { title: item.title || item.url }), 1);
-    if (item.type === "tab" && itemEl?.isConnected) {
-      panelView.removeResultItem(itemEl, item.id);
-    } else {
-      refreshCurrentView(index);
-    }
-  }
-
-  async function closeDomainTabsFromPanel(domain) {
-    try {
-      const result = await browser.runtime.sendMessage({
-        action: "close-domain-tabs",
-        domain,
-      });
-      const closed = result?.closed ?? 0;
-      panelView.showPanelToast(tCount("done.close-domain", closed, { domain }), closed);
-    } catch (err) {
-      console.warn("Quick TAB Launcher: closing site tabs failed", err);
-    }
-    retriggerSearch();
-  }
-
-  async function requestConfirm(item) {
-    let affected = 0;
-    try {
-      const preview = await browser.runtime.sendMessage({
-        action: "preview-command",
-        commandId: item.id,
-      });
-      affected = preview?.affected ?? 0;
-    } catch (err) {
-      console.warn("Quick TAB Launcher: preview failed", err);
-    }
-    const isStillSelected =
-      state.isVisible && state.flatResults[state.selectedIndex]?.id === item.id;
-    if (!isStillSelected) return;
-    if (affected === 0) {
-      closeLauncher();
-      showPageToast(t("done.nothing"));
-      return;
-    }
-    panelView.clearPendingConfirm();
-    state.pendingConfirmId = item.id;
-    const row = state.elements.results.querySelector(
-      `.qal-result-item[data-index="${state.selectedIndex}"]`,
-    );
-    // Inside the row, so the listbox only holds options and the text is
-    // read with the selected action.
-    row?.classList.add("qal-has-confirm");
-    row?.appendChild(buildConfirmStrip(tCount("confirm.closeTabs", affected)));
+    await panelController.requestUndo(count);
   }
 
   function outcomeMessage(commandId, result) {
@@ -558,182 +394,6 @@
     showPageToast(outcomeMessage(commandId, result), result?.closed ?? 0);
   }
 
-  function handleInput() {
-    clearTimeout(state.searchTimeout);
-    clearTimeout(state.loadingTimeout);
-    const query = state.elements.input.value;
-    const seq = ++state.searchSeq;
-    panelView.clearPendingConfirm();
-    state.elements.quickActions.hidden = Boolean(query.trim());
-    state.elements.duplicatesSlot.hidden = Boolean(query.trim());
-
-    if (!query.trim()) {
-      panelView.setFooterMode("recent");
-      renderEmpty(state.elements.results);
-      state.flatResults = [];
-      state.selectedIndex = -1;
-      fetchRecentTabs();
-      return;
-    }
-
-    if (isCommandMode(query)) {
-      panelView.setFooterMode("commands");
-      handleCommandInput(query.trimStart().slice(1));
-      return;
-    }
-    panelView.setFooterMode("search");
-
-    state.loadingTimeout = setTimeout(() => {
-      renderLoading(state.elements.results);
-    }, QAL_CONFIG.LOADING_THRESHOLD_MS);
-
-    state.searchTimeout = setTimeout(async () => {
-      try {
-        const results = await browser.runtime.sendMessage({
-          action: "search",
-          query,
-        });
-        // A newer keystroke or a closed panel makes this reply obsolete.
-        if (seq !== state.searchSeq || !state.isVisible) return;
-        clearTimeout(state.loadingTimeout);
-        state.results = results;
-        state.searchCommands = matchCommandsForSearch(
-          query,
-          state.activeTabState,
-        );
-        panelView.rebuildFlatResults();
-        state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
-        panelView.renderCurrentView(query);
-      } catch (err) {
-        if (seq !== state.searchSeq || !state.isVisible) return;
-        clearTimeout(state.loadingTimeout);
-        console.error("Quick TAB Launcher: search error", err);
-        renderError(state.elements.results);
-      }
-    }, QAL_CONFIG.DEBOUNCE_MS);
-  }
-
-  function handleCommandInput(query) {
-    const commands = filterCommands(query, state.activeTabState);
-    state.flatResults = commands.map((cmd) => ({ ...cmd, type: "command" }));
-    state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
-    renderCommandResults(
-      state.elements.results,
-      commands,
-      query,
-      state.selectedIndex,
-    );
-  }
-
-  function toggleGroupedView() {
-    state.isGroupedView = !state.isGroupedView;
-    updateGroupToggleState();
-    const query = state.elements.input.value;
-    if (query.trim() && !isCommandMode(query)) {
-      panelView.rebuildFlatResults();
-      panelView.renderCurrentView(query);
-    }
-  }
-
-  function handleKeydown(e) {
-    if (isAltShortcut(e, "c")) {
-      e.preventDefault();
-      toggleFulltextSearch();
-      return;
-    }
-
-    if (isAltShortcut(e, "g")) {
-      e.preventDefault();
-      toggleGroupedView();
-      return;
-    }
-
-    if (e.key === "?" && !state.elements.input.value) {
-      e.preventDefault();
-      panelView.toggleHelp();
-      return;
-    }
-
-    if (isAltShortcut(e, "w")) {
-      e.preventDefault();
-      if (!e.repeat) closeTabFromPanel(state.selectedIndex);
-      return;
-    }
-
-    if (isAltShortcut(e, "z") && state.panelUndoCount > 0) {
-      e.preventDefault();
-      undoLastClose();
-      return;
-    }
-
-    if (e.key === "Escape" && state.pendingConfirmId) {
-      e.preventDefault();
-      panelView.clearPendingConfirm();
-      return;
-    }
-
-    switch (e.key) {
-      case "ArrowDown":
-      case "Tab":
-        if (!e.shiftKey) {
-          e.preventDefault();
-          panelView.selectNext();
-        }
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        panelView.selectPrev();
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (state.selectedIndex >= 0) {
-          const item = state.flatResults[state.selectedIndex];
-          navigateTo(item, e.ctrlKey || e.metaKey);
-        }
-        break;
-      case "Escape":
-        e.preventDefault();
-        closeLauncher();
-        break;
-    }
-  }
-
-  function navigateTo(item, forceNewTab) {
-    if (item.type === "tab" || item.type === "recent-active") {
-      browser.runtime.sendMessage({
-        action: "navigate",
-        type: "tab",
-        tabId: item.id,
-      });
-    } else if (item.type === "recent-closed") {
-      browser.runtime.sendMessage({
-        action: "restore-session",
-        sessionId: item.sessionId,
-      });
-      closeLauncher();
-    } else if (item.type === "web-search") {
-      browser.runtime.sendMessage({
-        action: "web-search",
-        query: item.query,
-        newTab: Boolean(forceNewTab),
-      });
-      closeLauncher();
-    } else if (item.type === "command") {
-      if (item.confirm && state.pendingConfirmId !== item.id) {
-        requestConfirm(item);
-      } else {
-        runCommand(item.id);
-      }
-    } else {
-      browser.runtime.sendMessage({
-        action: "navigate",
-        type: item.type,
-        url: item.url,
-        openInCurrent: !forceNewTab,
-      });
-    }
-  }
-
   function handleBannerClick(e) {
     const dupDismiss = e.target.closest(".qal-duplicate-dismiss");
     if (dupDismiss) {
@@ -747,37 +407,6 @@
       e.stopPropagation();
       closeDuplicatesFromBanner(dupAction.closest(".qal-duplicate-banner"));
       return;
-    }
-  }
-
-  function handleResultClick(e) {
-    const closeBtn = e.target.closest(".qal-close-tab");
-    if (closeBtn) {
-      e.stopPropagation();
-      const itemEl = closeBtn.closest(".qal-result-item");
-      closeTabFromPanel(Number(itemEl.dataset.index));
-      return;
-    }
-
-    const domainCloseAll = e.target.closest(".qal-domain-close-all");
-    if (domainCloseAll) {
-      e.stopPropagation();
-      closeDomainTabsFromPanel(domainCloseAll.dataset.domain);
-      return;
-    }
-
-    const domainHeader = e.target.closest(".qal-domain-header");
-    if (domainHeader && !e.target.closest("button")) {
-      domainHeader.parentElement.classList.toggle("qal-collapsed");
-      return;
-    }
-
-    const itemEl = e.target.closest(".qal-result-item");
-    if (!itemEl) return;
-
-    const index = Number(itemEl.dataset.index);
-    if (index >= 0 && index < state.flatResults.length) {
-      navigateTo(state.flatResults[index], e.ctrlKey || e.metaKey);
     }
   }
 

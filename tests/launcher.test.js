@@ -108,6 +108,8 @@ async function loadLauncher(browserMock) {
     require("../src/panel-extras.js"),
     require("../src/onboarding.js"),
     require("../src/panel-view.js"),
+    require("../src/panel-actions.js"),
+    require("../src/panel-controller.js"),
     require("../src/render-utils.js"),
     require("../src/commands.js"),
     { tCount: require("../src/i18n.js").tCount },

@@ -130,3 +130,23 @@ describe("loading contract diagnostics", () => {
     }
   });
 });
+
+describe.each(["content", "popup"])("%s panel controller loading", (point) => {
+  it("routes navigation through the controller loaded before its host", () => {
+    const dom = loadWindow(point);
+    try {
+      for (const { file, source } of sourcesFor(point).slice(0, -1)) {
+        vm.runInContext(source, dom.getInternalVMContext(), { filename: file });
+      }
+      const hooks = { afterNavigate: vi.fn() };
+      const controller = dom.window.eval("createPanelController")({
+        state: dom.window.eval("createPanelState()"), elements: {}, hooks,
+      });
+      controller.navigateTo({ type: "recent-closed", sessionId: "restorable" });
+      expect(dom.window.browser.runtime.sendMessage).toHaveBeenCalledWith({ action: "restore-session", sessionId: "restorable" });
+      expect(hooks.afterNavigate).toHaveBeenCalledWith({ type: "recent-closed", sessionId: "restorable" });
+    } finally {
+      dom.window.close();
+    }
+  });
+});
