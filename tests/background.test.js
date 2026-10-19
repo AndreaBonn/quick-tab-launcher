@@ -30,6 +30,8 @@ function createBrowserMock() {
     runtime: {
       onMessage: { addListener: vi.fn() },
       openOptionsPage: vi.fn().mockResolvedValue(undefined),
+      onInstalled: { addListener: vi.fn() },
+      sendMessage: vi.fn().mockResolvedValue(undefined),
       getManifest: vi.fn(() => ({
         content_scripts: [{ js: ["src/i18n.js", "content/launcher.js"] }],
       })),
@@ -1390,5 +1392,44 @@ describe("background.js - focus changes refresh the privileged flag (#2)", () =>
       browserMock.windows.onFocusChanged.addListener.mock.calls[0][0];
     await onFocus(-1);
     expect(browserMock.tabs.query).not.toHaveBeenCalled();
+  });
+});
+
+describe("background.js - welcome page on first install (B1)", () => {
+  function load() {
+    const browserMock = createBrowserMock();
+    browserMock.runtime.onInstalled = { addListener: vi.fn() };
+    browserMock.runtime.getURL = vi.fn((p) => `moz-extension://id/${p}`);
+    loadBackground(browserMock);
+    const onInstalled =
+      browserMock.runtime.onInstalled.addListener.mock.calls[0][0];
+    return { browserMock, onInstalled };
+  }
+
+  it("opens the welcome page after a new install", async () => {
+    const { browserMock, onInstalled } = load();
+    await onInstalled({ reason: "install" });
+    expect(browserMock.tabs.create).toHaveBeenCalledWith({
+      url: "moz-extension://id/welcome/welcome.html",
+    });
+  });
+
+  it("stays quiet on updates and browser updates", async () => {
+    const { browserMock, onInstalled } = load();
+    await onInstalled({ reason: "update" });
+    await onInstalled({ reason: "browser_update" });
+    expect(browserMock.tabs.create).not.toHaveBeenCalled();
+  });
+
+  it("tells open extension pages that the shortcut was used", async () => {
+    const browserMock = createBrowserMock();
+    browserMock.runtime.onInstalled = { addListener: vi.fn() };
+    browserMock.runtime.sendMessage = vi.fn().mockResolvedValue(undefined);
+    const { commandListener } = loadBackground(browserMock);
+    browserMock.tabs.query.mockResolvedValue([{ id: 1 }]);
+    await commandListener("toggle-launcher");
+    expect(browserMock.runtime.sendMessage).toHaveBeenCalledWith({
+      action: "shortcut-used",
+    });
   });
 });

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="welcome.pageTitle">Quick Tab Launcher</title>
+    <link rel="stylesheet" href="welcome.css" />
+  </head>
+  <body>
+    <main class="qal-welcome">
+      <header class="qal-welcome-brand">
+        <img src="../icons/icon-48.png" alt="" width="28" height="28" />
+        <span>Quick Tab Launcher</span>
+      </header>
+
+      <h1 class="qal-welcome-title" data-i18n="welcome.title"></h1>
+      <p class="qal-welcome-lead" data-i18n="welcome.lead"></p>
+
+      <div class="qal-welcome-steps">
+        <section class="qal-step qal-step--main" aria-labelledby="qal-step1">
+          <h2 id="qal-step1" data-i18n="welcome.step1Title"></h2>
+          <p class="qal-bigkeys" id="qal-welcome-keys"></p>
+          <p
+            class="qal-welcome-status"
+            id="qal-welcome-status"
+            role="status"
+            data-i18n="welcome.waiting"
+          ></p>
+          <p class="qal-step-note" data-i18n="welcome.step1Note"></p>
+        </section>
+        <section class="qal-step" aria-labelledby="qal-step2">
+          <h2 id="qal-step2" data-i18n="welcome.step2Title"></h2>
+          <p data-i18n="welcome.step2Body"></p>
+        </section>
+        <section class="qal-step" aria-labelledby="qal-step3">
+          <h2 id="qal-step3" data-i18n="welcome.step3Title"></h2>
+          <p data-i18n="welcome.step3Body"></p>
+        </section>
+      </div>
+
+      <aside class="qal-pin-hint">
+        <strong data-i18n="welcome.pinTitle"></strong>
+        <span data-i18n="welcome.pinBody"></span>
+      </aside>
+
+      <nav class="qal-welcome-links">
+        <button
+          type="button"
+          class="qal-link"
+          id="qal-welcome-shortcut"
+          data-i18n="welcome.changeShortcut"
+        ></button>
+        <button
+          type="button"
+          class="qal-link"
+          id="qal-welcome-settings"
+          data-i18n="welcome.openSettings"
+        ></button>
+      </nav>
+    </main>
+
+    <script src="../src/i18n.js"></script>
+    <script src="../src/shortcut.js"></script>
+    <script src="welcome.js"></script>
+  </body>
+</html>

@@ -91,15 +91,36 @@ async function toggleLauncher() {
   }
 }
 
+// Lets the welcome page confirm that the user found the shortcut. Nobody may
+// be listening, which is fine.
+function announceShortcutUsed() {
+  browser.runtime
+    .sendMessage({ action: "shortcut-used" })
+    .catch(() => undefined);
+}
+
 browser.commands.onCommand.addListener(async (command) => {
   if (command !== TOGGLE_COMMAND) return;
   if (isActiveTabPrivileged) {
     browser.browserAction.openPopup().catch((err) => {
       console.log("Quick TAB Launcher: popup non aperto", err.message);
     });
+    announceShortcutUsed();
     return;
   }
+  announceShortcutUsed();
   await toggleLauncher();
+});
+
+const WELCOME_PAGE = "welcome/welcome.html";
+
+browser.runtime.onInstalled.addListener(async ({ reason }) => {
+  if (reason !== "install") return;
+  try {
+    await browser.tabs.create({ url: browser.runtime.getURL(WELCOME_PAGE) });
+  } catch (err) {
+    console.warn("Quick TAB Launcher: welcome page not opened", err);
+  }
 });
 
 async function refreshActionTitle() {

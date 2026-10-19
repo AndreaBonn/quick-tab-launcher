@@ -169,6 +169,27 @@ const I18N_MESSAGES = {
     "options.hint.fulltextPrivacy":
       "Il testo viene letto sul tuo computer e non lascia il browser.",
     "options.footer": "Quick Tab Launcher by",
+    "welcome.pageTitle": "Benvenuto in Quick Tab Launcher",
+    "welcome.title": "Installato. Provalo adesso.",
+    "welcome.lead":
+      "Un riquadro di ricerca per ritrovare qualsiasi scheda, segnalibro o pagina visitata, senza usare il mouse.",
+    "welcome.step1Title": "1. Premi questi tasti insieme",
+    "welcome.waiting": "In attesa che tu li prema…",
+    "welcome.done": "Fatto. Ora scrivi qualche lettera per cercare.",
+    "welcome.step1Note": "Funziona su qualsiasi sito. Si chiude con Esc.",
+    "welcome.noShortcut":
+      "Non c'è una scorciatoia impostata: sceglila nelle impostazioni.",
+    "welcome.step2Title": "2. Scrivi qualche lettera",
+    "welcome.step2Body":
+      "«git» trova GitHub fra schede aperte, segnalibri e cronologia. Invio apre il risultato evidenziato.",
+    "welcome.step3Title": "3. Scrivi > per le azioni",
+    "welcome.step3Body":
+      "Chiudere le schede doppie, silenziare, fissare, ordinare.",
+    "welcome.pinTitle": "Preferisci il mouse?",
+    "welcome.pinBody":
+      "Apri il menu Estensioni (l'icona a forma di puzzle nella barra), poi l'ingranaggio accanto a Quick Tab Launcher, e fissala alla barra degli strumenti.",
+    "welcome.changeShortcut": "Cambia la scorciatoia",
+    "welcome.openSettings": "Impostazioni",
   },
   en: {
     "launcher.placeholder": "Search tabs, bookmarks, history, or > actions",
@@ -328,6 +349,25 @@ const I18N_MESSAGES = {
     "options.hint.fulltextPrivacy":
       "Page text is read on your computer and never leaves the browser.",
     "options.footer": "Quick Tab Launcher by",
+    "welcome.pageTitle": "Welcome to Quick Tab Launcher",
+    "welcome.title": "Installed. Try it now.",
+    "welcome.lead":
+      "A search box to get back to any tab, bookmark or visited page, without the mouse.",
+    "welcome.step1Title": "1. Press these keys together",
+    "welcome.waiting": "Waiting for you to press them…",
+    "welcome.done": "Done. Now type a few letters to search.",
+    "welcome.step1Note": "Works on any site. Esc closes it.",
+    "welcome.noShortcut": "No shortcut is set: choose one in the settings.",
+    "welcome.step2Title": "2. Type a few letters",
+    "welcome.step2Body":
+      '"git" finds GitHub among open tabs, bookmarks and history. Enter opens the highlighted result.',
+    "welcome.step3Title": "3. Type > for actions",
+    "welcome.step3Body": "Close duplicate tabs, mute, pin, sort.",
+    "welcome.pinTitle": "Prefer the mouse?",
+    "welcome.pinBody":
+      "Open the Extensions menu (the puzzle icon in the toolbar), then the gear next to Quick Tab Launcher, and pin it to the toolbar.",
+    "welcome.changeShortcut": "Change the shortcut",
+    "welcome.openSettings": "Settings",
   },
 };
 
