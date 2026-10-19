@@ -474,6 +474,20 @@ async function closeTab(index) {
   }
 }
 
+async function closeDomainTabsFromPanel(domain) {
+  try {
+    const result = await browser.runtime.sendMessage({
+      action: "close-domain-tabs",
+      domain,
+    });
+    const closed = result?.closed ?? 0;
+    showToast(tCount("done.close-domain", closed, { domain }), closed);
+  } catch (err) {
+    console.warn("Quick TAB Launcher popup: closing site tabs failed", err);
+  }
+  refreshCurrentView();
+}
+
 async function undoLastClose() {
   const count = state.undoCount;
   hideToast();
@@ -505,6 +519,13 @@ function handleResultClick(e) {
     e.stopPropagation();
     const itemEl = closeBtn.closest(".qal-result-item");
     closeTab(Number(itemEl.dataset.index));
+    return;
+  }
+
+  const domainCloseAll = e.target.closest(".qal-domain-close-all");
+  if (domainCloseAll) {
+    e.stopPropagation();
+    closeDomainTabsFromPanel(domainCloseAll.dataset.domain);
     return;
   }
 

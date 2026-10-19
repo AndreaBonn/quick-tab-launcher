@@ -71,6 +71,31 @@ afterEach(() => {
 });
 
 describe("popup - same tools as the overlay (N3)", () => {
+  it("closes a domain from grouped results, refreshes and offers undo", async () => {
+    let domainClosed = false;
+    const { browserMock, input } = await openRegressionPopup({
+      search: () => ({
+        ...SEARCH_TABS(),
+        tabs: domainClosed ? [SEARCH_TABS().tabs[1]] : SEARCH_TABS().tabs,
+      }),
+      "close-domain-tabs": () => { domainClosed = true; return { closed: 2 }; },
+    });
+    press(input, "g", { code: "KeyG", altKey: true });
+    await type(input, "x");
+    document.querySelector('.qal-domain-close-all[data-domain="github.com"]').click();
+    await settle(globalThis.QAL_CONFIG.DEBOUNCE_MS + 60);
+    expect(sent(browserMock)).toContainEqual({
+      action: "close-domain-tabs", domain: "github.com",
+    });
+    expect(document.querySelector(".qal-toast-slot").textContent).toContain("2 schede di github.com chiuse");
+    expect(document.querySelector(".qal-results").textContent).toContain("SO");
+    expect(document.querySelector(".qal-results").textContent).not.toContain("GH a");
+    expect(browserMock.runtime.sendMessage.mock.calls.filter(([m]) => m.action === "search")).toHaveLength(2);
+    document.querySelector('[data-qal-action="undo"]').click();
+    await settle();
+    expect(sent(browserMock)).toContainEqual({ action: "undo-close", count: 2 });
+  });
+
   it("does not confirm a command after selection changes during preview", async () => {
     let resolvePreview;
     const preview = new Promise((resolve) => { resolvePreview = resolve; });
