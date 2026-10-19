@@ -11,6 +11,7 @@ web-ext-artifacts/
 Thumbs.db
 doc_progetto/
 docs/REPORT_ATTIVITA.md
+docs/ux-proposte/
 .playwright-mcp/
 docs/amo-submission/screenshots/mockup-*.html
 CLAUDE.md
