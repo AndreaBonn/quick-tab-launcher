@@ -34,11 +34,6 @@ export default [
     },
   },
   {
-    // Temporary exceptions until the planned decompositions remove these violations.
-    files: ["background/background.js"],
-    rules: { "max-lines": "off", "max-lines-per-function": "off" },
-  },
-  {
     files: ["background/tab-commands.js"],
     rules: { "max-lines-per-function": "off" },
   },

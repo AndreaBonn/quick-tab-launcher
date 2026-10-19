@@ -150,93 +150,82 @@ browser.tabs
     if (activeTab?.id) updatePopupForTab(activeTab.id);
   });
 
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "search") {
+const MESSAGE_ROUTES = {
+  "search": (message, sender, sendResponse) => {
     const senderWindowId = sender.tab?.windowId;
     handleSearch(message.query, senderWindowId).then(sendResponse);
     return true;
-  }
-
-  if (message.action === "navigate") {
+  },
+  "navigate": (message, sender) => {
     handleNavigate(message, sender.tab?.id);
     return false;
-  }
-
-  if (message.action === "close-tab") {
+  },
+  "close-tab": (message, _sender, sendResponse) => {
     handleCloseTab(message.tabId).then((ok) =>
       sendResponse({ closed: ok ? 1 : 0 }),
     );
     return true;
-  }
-
-  if (message.action === "get-recent-tabs") {
+  },
+  "get-recent-tabs": (_message, sender, sendResponse) => {
     resolveCurrentTabId(sender)
       .then((tabId) => getRecentTabs(tabId))
       .then(sendResponse);
     return true;
-  }
-
-  if (message.action === "get-active-tab-state") {
+  },
+  "get-active-tab-state": (_message, sender, sendResponse) => {
     getActiveTabState(sender.tab).then(sendResponse);
     return true;
-  }
-
-  if (message.action === "preview-command") {
+  },
+  "preview-command": (message, _sender, sendResponse) => {
     previewCommand(message.commandId).then(sendResponse);
     return true;
-  }
-
-  if (message.action === "undo-close") {
+  },
+  "undo-close": (message, _sender, sendResponse) => {
     undoClose(message.count).then(sendResponse);
     return true;
-  }
-
-  if (message.action === "get-web-search-state") {
+  },
+  "get-web-search-state": (_message, _sender, sendResponse) => {
     hasWebSearchPermission().then((enabled) => sendResponse({ enabled }));
     return true;
-  }
-
-  if (message.action === "web-search") {
+  },
+  "web-search": (message, sender, sendResponse) => {
     runWebSearch(message, sender.tab?.id).then((ok) => sendResponse({ ok }));
     return true;
-  }
-
-  if (message.action === "open-options") {
+  },
+  "open-options": () => {
     browser.runtime.openOptionsPage();
     return false;
-  }
-
-  if (message.action === "refresh-action-title") {
+  },
+  "refresh-action-title": () => {
     refreshActionTitle();
     return false;
-  }
-
-  if (message.action === "restore-session") {
+  },
+  "restore-session": (message) => {
     restoreSession(message.sessionId);
     return false;
-  }
-
-  if (message.action === "get-duplicate-count") {
+  },
+  "get-duplicate-count": (_message, _sender, sendResponse) => {
     getDuplicateSummary().then(sendResponse);
     return true;
-  }
-
-  if (message.action === "close-duplicates") {
+  },
+  "close-duplicates": (_message, _sender, sendResponse) => {
     closeDuplicateTabs().then(sendResponse);
     return true;
-  }
-
-  if (message.action === "execute-command") {
+  },
+  "execute-command": (message, _sender, sendResponse) => {
     executeCommand(message.commandId).then(sendResponse);
     return true;
-  }
-
-  if (message.action === "close-domain-tabs") {
+  },
+  "close-domain-tabs": (message, _sender, sendResponse) => {
     closeDomainTabs(message.domain).then(sendResponse);
     return true;
-  }
+  },
+};
 
-  return false;
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (typeof message.action !== "string") return false;
+  if (!Object.hasOwn(MESSAGE_ROUTES, message.action)) return false;
+  return MESSAGE_ROUTES[message.action](message, sender, sendResponse);
 });
 
 if (typeof module !== "undefined" && module.exports) {
