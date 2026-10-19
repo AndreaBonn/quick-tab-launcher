@@ -8,7 +8,6 @@ function createLauncherInput() {
   input.spellcheck = false;
   input.setAttribute("role", "combobox");
   input.setAttribute("aria-label", t("launcher.inputLabel"));
-  input.setAttribute("aria-controls", "qal-results");
   input.setAttribute("aria-expanded", "true");
   input.setAttribute("aria-autocomplete", "list");
 
@@ -58,6 +57,7 @@ function createLauncherSlots(input) {
 
   const results = createElement("div", "qal-results");
   results.id = "qal-results";
+  input.setAttribute("aria-controls", results.id);
   results.setAttribute("role", "listbox");
   results.activeDescendantOwner = input;
   const footer = createElement("div", "qal-footer");
@@ -74,8 +74,10 @@ function createOverlayDOM(shadowRoot) {
   panel.setAttribute("aria-label", "Quick Tab Launcher");
   const { searchContainer, ...search } = createLauncherSearch();
   const slots = createLauncherSlots(search.input);
-  panel.append(searchContainer, slots.quickActions, slots.guide, slots.toastSlot,
-  slots.duplicatesSlot, slots.results, slots.footer);
+  panel.append(
+    searchContainer, slots.quickActions, slots.guide, slots.toastSlot,
+    slots.duplicatesSlot, slots.results, slots.footer,
+  );
   overlay.append(backdrop, panel);
   // Outcome messages shown after the panel closes live outside it.
   const pageToastSlot = createElement("div", "qal-page-toast-slot");
