@@ -188,6 +188,7 @@ function handleInput() {
       state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
       panelView.renderCurrentView(query);
     } catch (err) {
+      if (seq !== state.searchSeq) return;
       clearTimeout(state.loadingTimeout);
       console.error("Quick TAB Launcher popup: search error", err);
       renderError(state.elements.results);

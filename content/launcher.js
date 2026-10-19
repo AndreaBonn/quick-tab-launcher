@@ -605,6 +605,7 @@
         state.selectedIndex = state.flatResults.length > 0 ? 0 : -1;
         panelView.renderCurrentView(query);
       } catch (err) {
+        if (seq !== state.searchSeq || !state.isVisible) return;
         clearTimeout(state.loadingTimeout);
         console.error("Quick TAB Launcher: search error", err);
         renderError(state.elements.results);
