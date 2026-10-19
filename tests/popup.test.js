@@ -1,0 +1,166 @@
+import { describe, it, expect, afterEach, vi } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  createBrowserMock,
+  settle,
+  press,
+  type,
+} from "./helpers/load-launcher.js";
+
+const POPUP_HTML = fs.readFileSync(
+  path.join(__dirname, "../popup/popup.html"),
+  "utf8",
+);
+const MODULES = [
+  "../src/config-storage.js",
+  "../src/search-utils.js",
+  "../src/fuzzy.js",
+  "../src/i18n.js",
+  "../src/commands.js",
+  "../src/icons.js",
+  "../src/hints.js",
+  "../src/render-utils.js",
+  "../src/panel-extras.js",
+];
+
+const SEARCH_TABS = () => ({
+  tabs: [
+    { id: 1, title: "GH a", url: "https://github.com/a" },
+    { id: 2, title: "SO", url: "https://stackoverflow.com/q" },
+    { id: 3, title: "GH b", url: "https://github.com/b" },
+  ],
+  bookmarks: [],
+  history: [],
+});
+
+async function openPopup(replies = {}) {
+  const body = POPUP_HTML.slice(
+    POPUP_HTML.indexOf("<body"),
+    POPUP_HTML.indexOf("<script"),
+  ).replace(/<body[^>]*>/, "");
+  document.body.className = "qal-popup";
+  document.body.innerHTML = body;
+  const browserMock = createBrowserMock(replies);
+  browserMock.runtime.openOptionsPage = vi.fn();
+  globalThis.browser = browserMock;
+  for (const modulePath of MODULES) {
+    Object.assign(globalThis, require(modulePath));
+  }
+  globalThis.setLocaleFromStorage("it");
+  window.close = vi.fn();
+  delete require.cache[require.resolve("../popup/popup.js")];
+  require("../popup/popup.js");
+  document.dispatchEvent(new Event("DOMContentLoaded"));
+  await settle();
+  return { browserMock, input: document.querySelector(".qal-input") };
+}
+
+function sent(browserMock) {
+  return browserMock.runtime.sendMessage.mock.calls.map(([m]) => m);
+}
+
+afterEach(() => {
+  document.body.innerHTML = "";
+  delete globalThis.browser;
+});
+
+describe("popup - same tools as the overlay (N3)", () => {
+  it("shows the By site and Search text toggles with their labels", async () => {
+    await openPopup();
+    expect(document.querySelector(".qal-group-toggle").textContent).toBe(
+      "Per sito",
+    );
+    expect(document.querySelector(".qal-fulltext-toggle").textContent).toBe(
+      "Cerca nel testo",
+    );
+  });
+
+  it("Alt+G groups results by site and Enter opens the highlighted row", async () => {
+    const { browserMock, input } = await openPopup({ search: SEARCH_TABS });
+    press(input, "g", { code: "KeyG", altKey: true });
+    await type(input, "x");
+    expect(
+      document.querySelector(".qal-group-toggle").getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    press(input, "ArrowDown");
+    press(input, "Enter");
+
+    expect(sent(browserMock)).toContainEqual(
+      expect.objectContaining({ action: "navigate", tabId: 3 }),
+    );
+  });
+
+  it("the Search text toggle saves the setting", async () => {
+    const { browserMock } = await openPopup();
+    const before = globalThis.QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
+    document.querySelector(".qal-fulltext-toggle").click();
+    await settle();
+    expect(browserMock.store.qal_user_config.ENABLE_FULLTEXT_SEARCH).toBe(
+      !before,
+    );
+    globalThis.QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = before;
+  });
+
+  it("an empty search suggests what to try", async () => {
+    const { input } = await openPopup();
+    await type(input, "fattura iva");
+    expect(document.querySelector(".qal-tips").textContent).toContain(
+      "meno parole",
+    );
+  });
+
+  it("finds actions without the > prefix", async () => {
+    const { input } = await openPopup();
+    await type(input, "silenzia");
+    expect(
+      document.querySelector('.qal-section[data-section="commands"]')
+        .textContent,
+    ).toContain("Silenzia scheda");
+  });
+
+  it("Alt+W closes the selected tab and offers undo", async () => {
+    const { browserMock, input } = await openPopup({
+      search: SEARCH_TABS,
+      "close-tab": { closed: 1 },
+    });
+    await type(input, "x");
+    press(input, "w", { code: "KeyW", altKey: true });
+    await settle();
+    expect(sent(browserMock)).toContainEqual({ action: "close-tab", tabId: 1 });
+    document.querySelector('[data-qal-action="undo"]').click();
+    await settle();
+    expect(sent(browserMock)).toContainEqual({
+      action: "undo-close",
+      count: 1,
+    });
+  });
+
+  it("asks to confirm before closing other tabs", async () => {
+    const { browserMock, input } = await openPopup({
+      "preview-command": { affected: 2 },
+    });
+    await type(input, ">altre");
+    press(input, "Enter");
+    await settle();
+    expect(document.querySelector(".qal-confirm").textContent).toContain(
+      "Chiuderà 2 schede",
+    );
+    expect(window.close).not.toHaveBeenCalled();
+    press(input, "Enter");
+    expect(sent(browserMock)).toContainEqual({
+      action: "execute-command",
+      commandId: "close-other-tabs",
+    });
+    expect(window.close).toHaveBeenCalled();
+  });
+
+  it("has no branding row and renders keys in the footer", async () => {
+    await openPopup();
+    expect(document.querySelector(".qal-branding")).toBeNull();
+    expect(document.querySelectorAll(".qal-footer kbd").length).toBeGreaterThan(
+      0,
+    );
+  });
+});

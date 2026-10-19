@@ -23,7 +23,18 @@
             aria-expanded="true"
             aria-autocomplete="list"
           />
+          <button
+            type="button"
+            class="qal-toggle qal-group-toggle"
+            aria-pressed="false"
+          ></button>
+          <button
+            type="button"
+            class="qal-toggle qal-fulltext-toggle"
+            aria-pressed="false"
+          ></button>
         </div>
+        <div class="qal-toast-slot" aria-live="polite"></div>
         <div class="qal-results" id="qal-results" role="listbox"></div>
         <div class="qal-footer"></div>
       </div>
@@ -37,6 +48,7 @@
     <script src="../src/icons.js"></script>
     <script src="../src/hints.js"></script>
     <script src="../src/render-utils.js"></script>
+    <script src="../src/panel-extras.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
