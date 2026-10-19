@@ -19,6 +19,7 @@ const SECTION_ICONS = {
   "recent-active": "tabs",
   "recent-closed": "restore",
   commands: "bolt",
+  web: "search",
   "command-tabs": "tabs",
   "command-current": "bolt",
 };
@@ -31,6 +32,7 @@ const ENTER_HINT_KEYS = {
   bookmarks: "enterHint.open",
   history: "enterHint.open",
   command: "enterHint.run",
+  "web-search": "enterHint.search",
 };
 
 function createElement(tag, className) {
@@ -331,11 +333,39 @@ function appendCommandSection(
  * @param {HTMLElement} container - Results container.
  * @param {object} view - { results, commands, query, selectedIndex, grouped, tips }.
  */
+function createWebSearchItem(query, index) {
+  const el = createElement("div", "qal-result-item qal-command-item");
+  el.setAttribute("role", "option");
+  el.setAttribute("aria-selected", "false");
+  el.dataset.type = "web-search";
+  el.dataset.index = index;
+  const icon = createElement("span", "qal-command-icon");
+  appendIcon(icon, "search");
+  const text = createElement("div", "qal-result-text");
+  const title = createElement("span", "qal-result-title");
+  title.textContent = t("webSearch.title", { query });
+  const desc = createElement("span", "qal-result-url qal-command-desc");
+  desc.textContent = t("webSearch.desc");
+  text.append(title, desc);
+  el.append(icon, text, createEnterHint("web-search"));
+  return el;
+}
+
 function renderSearchView(container, view) {
   const { results, commands, query, selectedIndex, grouped, tips } = view;
   const total =
     results.tabs.length + results.bookmarks.length + results.history.length;
   if (total === 0 && commands.length === 0) {
+    if (tips?.webSearchEnabled) {
+      // Nothing local matched: the way out is the web, as the only option.
+      container.innerHTML = "";
+      setResultsRole(container, "listbox");
+      const section = createSection("web", 1);
+      section.appendChild(createWebSearchItem(query.trim(), 0));
+      container.appendChild(section);
+      updateSelection(container, selectedIndex);
+      return;
+    }
     renderNoResults(container, query, tips);
     return;
   }
@@ -509,6 +539,15 @@ function renderNoResults(container, query, tips) {
         t("noResults.openSettings"),
       ),
     );
+    if (tips.webSearchEnabled === false) {
+      list.appendChild(
+        createTip(
+          t("noResults.tipWeb"),
+          "open-options",
+          t("noResults.enableWeb"),
+        ),
+      );
+    }
     empty.appendChild(list);
   }
   container.appendChild(empty);

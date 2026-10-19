@@ -262,7 +262,9 @@ describe("i18n - user-facing wording", () => {
   it("command descriptions do not repeat the command label", () => {
     for (const locale of ["it", "en"]) {
       const dict = I18N_MESSAGES[locale];
-      for (const key of Object.keys(dict).filter((k) => k.endsWith(".desc"))) {
+      for (const key of Object.keys(dict).filter(
+        (k) => k.startsWith("commands.") && k.endsWith(".desc"),
+      )) {
         const label = dict[key.replace(/\.desc$/, "")];
         expect(dict[key].toLowerCase(), `${locale} ${key}`).not.toContain(
           label.toLowerCase(),

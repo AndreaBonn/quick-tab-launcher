@@ -37,3 +37,10 @@ describe("manifest localization (L1)", () => {
     });
   }
 });
+
+describe("web search permission (R9)", () => {
+  it("is optional, so updating users are not asked for it", () => {
+    expect(manifest.optional_permissions).toContain("search");
+    expect(manifest.permissions).not.toContain("search");
+  });
+});

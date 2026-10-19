@@ -191,6 +191,17 @@ const I18N_MESSAGES = {
     "welcome.changeShortcut": "Cambia la scorciatoia",
     "welcome.openSettings": "Impostazioni",
     "options.howTo": "Come si usa",
+    "webSearch.title": "Cerca «{{query}}» sul web",
+    "webSearch.desc": "Nessun risultato fra schede, segnalibri e cronologia",
+    "sections.web": "Web",
+    "enterHint.search": "Cerca",
+    "noResults.tipWeb": "Puoi anche cercare sul web quando non trovi niente:",
+    "noResults.enableWeb": "attivalo nelle impostazioni",
+    "options.label.webSearch": "Cerca sul web quando non trova niente",
+    "options.hint.webSearch":
+      "Usa il motore di ricerca predefinito di Firefox. All'attivazione Firefox ti chiederà il permesso.",
+    "options.feedback.webSearchDenied":
+      "Permesso non concesso: la ricerca sul web resta spenta.",
   },
   en: {
     "launcher.placeholder": "Search tabs, bookmarks, history, or > actions",
@@ -370,6 +381,17 @@ const I18N_MESSAGES = {
     "welcome.changeShortcut": "Change the shortcut",
     "welcome.openSettings": "Settings",
     "options.howTo": "How to use it",
+    "webSearch.title": 'Search the web for "{{query}}"',
+    "webSearch.desc": "Nothing found in tabs, bookmarks and history",
+    "sections.web": "Web",
+    "enterHint.search": "Search",
+    "noResults.tipWeb": "You can also search the web when nothing matches:",
+    "noResults.enableWeb": "turn it on in settings",
+    "options.label.webSearch": "Search the web when nothing matches",
+    "options.hint.webSearch":
+      "Uses Firefox's default search engine. Firefox asks for permission when you turn it on.",
+    "options.feedback.webSearchDenied":
+      "Permission not granted: web search stays off.",
   },
 };
 

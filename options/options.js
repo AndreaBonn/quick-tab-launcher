@@ -2,6 +2,7 @@
 
 const TOGGLE_COMMAND = "toggle-launcher";
 const WELCOME_PAGE = "welcome/welcome.html";
+const WEB_SEARCH_PERMISSION = { permissions: ["search"] };
 const AUTOSAVE_DELAY_MS = 400;
 const IS_MAC = /mac/i.test(navigator.platform || "");
 
@@ -240,6 +241,28 @@ async function resetShortcut() {
   }
 }
 
+async function setupWebSearch() {
+  const toggle = document.getElementById("qal-web-search");
+  if (!toggle) return;
+  try {
+    toggle.checked = await browser.permissions.contains(WEB_SEARCH_PERMISSION);
+  } catch (err) {
+    console.warn("Quick TAB Launcher: permission state unavailable", err);
+  }
+  toggle.addEventListener("change", async (event) => {
+    // Not part of the saved settings: the permission itself is the state.
+    event.stopPropagation();
+    if (!toggle.checked) {
+      await browser.permissions.remove(WEB_SEARCH_PERMISSION);
+      return;
+    }
+    // request() must be the first call in the user's click handler.
+    const granted = await browser.permissions.request(WEB_SEARCH_PERMISSION);
+    toggle.checked = granted;
+    if (!granted) showFeedback(t("options.feedback.webSearchDenied"), true);
+  });
+}
+
 function setupShortcut() {
   const changeBtn = document.getElementById("qal-shortcut-change");
   changeBtn?.addEventListener("click", startCapture);
@@ -284,6 +307,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyTranslations(document);
   setupLocaleSelect();
   setupShortcut();
+  setupWebSearch();
   document.getElementById("qal-open-welcome")?.addEventListener("click", () => {
     browser.tabs.create({ url: browser.runtime.getURL(WELCOME_PAGE) });
   });

@@ -16,6 +16,7 @@ const state = {
   isHelpExpanded: false,
   isGroupedView: false,
   activeTabState: null,
+  webSearchEnabled: false,
   pendingConfirmId: null,
   undoCount: 0,
   isClosingTab: false,
@@ -101,6 +102,7 @@ function init() {
 
   fetchRecentTabs();
   fetchActiveTabState();
+  fetchWebSearchState();
 
   input.addEventListener("input", handleInput);
   input.addEventListener("keydown", handleKeydown);
@@ -125,6 +127,17 @@ async function fetchActiveTabState() {
     });
   } catch {
     state.activeTabState = null;
+  }
+}
+
+async function fetchWebSearchState() {
+  try {
+    const reply = await browser.runtime.sendMessage({
+      action: "get-web-search-state",
+    });
+    state.webSearchEnabled = Boolean(reply?.enabled);
+  } catch {
+    state.webSearchEnabled = false;
   }
 }
 
@@ -166,6 +179,11 @@ function rebuildFlatResults() {
     ...buildFlatResults(state.results, { grouped: state.isGroupedView }),
     ...state.searchCommands.map((cmd) => ({ ...cmd, type: "command" })),
   ];
+  // Nothing matched: the web search row is the only result (R9).
+  const query = state.elements.input.value.trim();
+  if (state.flatResults.length === 0 && state.webSearchEnabled && query) {
+    state.flatResults = [{ type: "web-search", query }];
+  }
 }
 
 function renderCurrentView(query) {
@@ -178,6 +196,7 @@ function renderCurrentView(query) {
     tips: {
       fulltextEnabled: QAL_CONFIG.ENABLE_FULLTEXT_SEARCH,
       historyDays: QAL_CONFIG.HISTORY_DAYS,
+      webSearchEnabled: state.webSearchEnabled,
     },
   });
 }
@@ -376,6 +395,12 @@ function navigateTo(item, forceNewTab) {
     browser.runtime.sendMessage({
       action: "restore-session",
       sessionId: item.sessionId,
+    });
+  } else if (item.type === "web-search") {
+    browser.runtime.sendMessage({
+      action: "web-search",
+      query: item.query,
+      newTab: Boolean(forceNewTab),
     });
   } else if (item.type === "command") {
     browser.runtime.sendMessage({

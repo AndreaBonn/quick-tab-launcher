@@ -1433,3 +1433,81 @@ describe("background.js - welcome page on first install (B1)", () => {
     });
   });
 });
+
+describe("background.js - web search (R9)", () => {
+  function load(granted) {
+    const browserMock = createBrowserMock();
+    browserMock.permissions = {
+      contains: vi.fn().mockResolvedValue(granted),
+    };
+    browserMock.search = { query: vi.fn().mockResolvedValue(undefined) };
+    const { messageListener } = loadBackground(browserMock);
+    return { browserMock, messageListener };
+  }
+
+  it("reports whether the user turned web search on", async () => {
+    const { messageListener, browserMock } = load(true);
+    const sendResponse = vi.fn();
+    messageListener({ action: "get-web-search-state" }, {}, sendResponse);
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({ enabled: true }),
+    );
+    expect(browserMock.permissions.contains).toHaveBeenCalledWith({
+      permissions: ["search"],
+    });
+  });
+
+  it("searches in the tab the panel is on", async () => {
+    const { messageListener, browserMock } = load(true);
+    messageListener(
+      { action: "web-search", query: "fattura iva", newTab: false },
+      { tab: { id: 7 } },
+      vi.fn(),
+    );
+    await vi.waitFor(() =>
+      expect(browserMock.search.query).toHaveBeenCalledWith({
+        text: "fattura iva",
+        tabId: 7,
+      }),
+    );
+  });
+
+  it("searches in a new tab with Ctrl+Enter or from the popup", async () => {
+    const { messageListener, browserMock } = load(true);
+    messageListener(
+      { action: "web-search", query: "x", newTab: true },
+      { tab: { id: 7 } },
+      vi.fn(),
+    );
+    messageListener(
+      { action: "web-search", query: "y", newTab: false },
+      {},
+      vi.fn(),
+    );
+    await vi.waitFor(() =>
+      expect(browserMock.search.query).toHaveBeenCalledTimes(2),
+    );
+    expect(browserMock.search.query).toHaveBeenCalledWith({
+      text: "x",
+      disposition: "NEW_TAB",
+    });
+    expect(browserMock.search.query).toHaveBeenCalledWith({
+      text: "y",
+      disposition: "NEW_TAB",
+    });
+  });
+
+  it("does nothing without the permission", async () => {
+    const { messageListener, browserMock } = load(false);
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "web-search", query: "x", newTab: false },
+      { tab: { id: 7 } },
+      sendResponse,
+    );
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({ ok: false }),
+    );
+    expect(browserMock.search.query).not.toHaveBeenCalled();
+  });
+});

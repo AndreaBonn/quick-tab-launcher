@@ -243,3 +243,70 @@ describe("how-to link (O6)", () => {
     });
   });
 });
+
+describe("web search switch (R9)", () => {
+  async function openWithPermission(granted, requestResult = true) {
+    const browserMock = await openOptions();
+    browserMock.permissions = {
+      contains: vi.fn().mockResolvedValue(granted),
+      request: vi.fn().mockResolvedValue(requestResult),
+      remove: vi.fn().mockResolvedValue(true),
+    };
+    // Reload so the page reads the permission state through the new mock.
+    globalThis.browser = browserMock;
+    delete require.cache[require.resolve("../options/options.js")];
+    let onReady;
+    const spy = vi
+      .spyOn(document, "addEventListener")
+      .mockImplementation((type, handler) => {
+        if (type === "DOMContentLoaded") onReady = handler;
+      });
+    require("../options/options.js");
+    spy.mockRestore();
+    document.body.innerHTML = OPTIONS_HTML.slice(
+      OPTIONS_HTML.indexOf("<body>") + "<body>".length,
+      OPTIONS_HTML.indexOf("<script"),
+    );
+    await onReady();
+    await new Promise((r) => setTimeout(r, 0));
+    return browserMock;
+  }
+
+  it("reflects whether the permission is granted", async () => {
+    await openWithPermission(true);
+    expect($("#qal-web-search").checked).toBe(true);
+  });
+
+  it("asks Firefox for the permission when switched on", async () => {
+    const browserMock = await openWithPermission(false, true);
+    const sw = $("#qal-web-search");
+    sw.checked = true;
+    sw.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(browserMock.permissions.request).toHaveBeenCalledWith({
+      permissions: ["search"],
+    });
+    expect(sw.checked).toBe(true);
+  });
+
+  it("turns back off when the user declines", async () => {
+    const browserMock = await openWithPermission(false, false);
+    const sw = $("#qal-web-search");
+    sw.checked = true;
+    sw.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(browserMock.permissions.request).toHaveBeenCalled();
+    expect(sw.checked).toBe(false);
+  });
+
+  it("gives the permission back when switched off", async () => {
+    const browserMock = await openWithPermission(true);
+    const sw = $("#qal-web-search");
+    sw.checked = false;
+    sw.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(browserMock.permissions.remove).toHaveBeenCalledWith({
+      permissions: ["search"],
+    });
+  });
+});

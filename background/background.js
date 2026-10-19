@@ -209,6 +209,16 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === "get-web-search-state") {
+    hasWebSearchPermission().then((enabled) => sendResponse({ enabled }));
+    return true;
+  }
+
+  if (message.action === "web-search") {
+    runWebSearch(message, sender.tab?.id).then((ok) => sendResponse({ ok }));
+    return true;
+  }
+
   if (message.action === "open-options") {
     browser.runtime.openOptionsPage();
     return false;
@@ -407,6 +417,39 @@ async function handleNavigate(message, senderTabId) {
     }
   } catch (err) {
     console.log("Quick TAB Launcher: navigazione fallita", err.message);
+  }
+}
+
+const WEB_SEARCH_PERMISSION = { permissions: ["search"] };
+
+// Optional permission: users turn web search on from the settings page.
+async function hasWebSearchPermission() {
+  try {
+    return await browser.permissions.contains(WEB_SEARCH_PERMISSION);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Searches the web with Firefox's default engine.
+ *
+ * @param {{query: string, newTab: boolean}} message - From the panel.
+ * @param {number|undefined} senderTabId - Tab the overlay is on; absent from the popup.
+ * @returns {Promise<boolean>} Whether a search was started.
+ */
+async function runWebSearch({ query, newTab }, senderTabId) {
+  if (!query?.trim() || !(await hasWebSearchPermission())) return false;
+  const target =
+    newTab || !senderTabId
+      ? { disposition: "NEW_TAB" }
+      : { tabId: senderTabId };
+  try {
+    await browser.search.query({ text: query, ...target });
+    return true;
+  } catch (err) {
+    console.log("Quick TAB Launcher: ricerca web fallita", err.message);
+    return false;
   }
 }
 

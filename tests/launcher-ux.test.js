@@ -623,3 +623,51 @@ describe("accessibility of the result list", () => {
     expect(input.hasAttribute("aria-activedescendant")).toBe(false);
   });
 });
+
+describe("web search when nothing matches (R9)", () => {
+  it("offers to search the web when the user turned it on", async () => {
+    const { shadowRoot, browserMock, input } = await openWith({
+      "get-web-search-state": { enabled: true },
+    });
+    await type(input, "fattura iva");
+    const row = shadowRoot.querySelector(".qal-result-item.qal-selected");
+    expect(row.textContent).toContain("Cerca «fattura iva» sul web");
+    expect(shadowRoot.querySelector(".qal-results").getAttribute("role")).toBe(
+      "listbox",
+    );
+
+    press(input, "Enter");
+    expect(sentActions(browserMock)).toContainEqual({
+      action: "web-search",
+      query: "fattura iva",
+      newTab: false,
+    });
+    expect(shadowRoot.querySelector(".qal-overlay").style.display).toBe("none");
+  });
+
+  it("Ctrl+Enter searches in a new tab", async () => {
+    const { browserMock, input } = await openWith({
+      "get-web-search-state": { enabled: true },
+    });
+    await type(input, "fattura iva");
+    press(input, "Enter", { ctrlKey: true });
+    expect(sentActions(browserMock)).toContainEqual({
+      action: "web-search",
+      query: "fattura iva",
+      newTab: true,
+    });
+  });
+
+  it("without the permission, says where to turn it on", async () => {
+    const { shadowRoot, input } = await openWith({
+      "get-web-search-state": { enabled: false },
+    });
+    await type(input, "fattura iva");
+    expect(shadowRoot.querySelector(".qal-tips").textContent).toContain(
+      "cercare sul web",
+    );
+    expect(
+      shadowRoot.querySelector('.qal-result-item[data-type="web-search"]'),
+    ).toBeNull();
+  });
+});

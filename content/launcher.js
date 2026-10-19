@@ -24,6 +24,7 @@
     footerMode: "recent",
     isHelpExpanded: false,
     activeTabState: null,
+    webSearchEnabled: false,
     searchCommands: [],
     pendingConfirmId: null,
     panelUndoCount: 0,
@@ -276,6 +277,7 @@
     fetchRecentTabs();
     checkDuplicates();
     fetchActiveTabState();
+    fetchWebSearchState();
     showGuideIfNeeded();
 
     requestAnimationFrame(() => {
@@ -378,6 +380,18 @@
     }
     if (state.isVisible) {
       renderQuickActions(state.elements.quickActions, quickCommands());
+    }
+  }
+
+  async function fetchWebSearchState() {
+    try {
+      const reply = await browser.runtime.sendMessage({
+        action: "get-web-search-state",
+      });
+      state.webSearchEnabled = Boolean(reply?.enabled);
+    } catch (err) {
+      state.webSearchEnabled = false;
+      console.warn("Quick TAB Launcher: web search state unavailable", err);
     }
   }
 
@@ -674,6 +688,11 @@
       ...buildFlatResults(state.results, { grouped: state.isGroupedView }),
       ...state.searchCommands.map((cmd) => ({ ...cmd, type: "command" })),
     ];
+    // Nothing matched: the web search row is the only result (R9).
+    const query = state.elements.input.value.trim();
+    if (state.flatResults.length === 0 && state.webSearchEnabled && query) {
+      state.flatResults = [{ type: "web-search", query }];
+    }
   }
 
   function renderCurrentView(query) {
@@ -686,6 +705,7 @@
       tips: {
         fulltextEnabled: QAL_CONFIG.ENABLE_FULLTEXT_SEARCH,
         historyDays: QAL_CONFIG.HISTORY_DAYS,
+        webSearchEnabled: state.webSearchEnabled,
       },
     });
   }
@@ -791,6 +811,13 @@
       browser.runtime.sendMessage({
         action: "restore-session",
         sessionId: item.sessionId,
+      });
+      closeLauncher();
+    } else if (item.type === "web-search") {
+      browser.runtime.sendMessage({
+        action: "web-search",
+        query: item.query,
+        newTab: Boolean(forceNewTab),
       });
       closeLauncher();
     } else if (item.type === "command") {
