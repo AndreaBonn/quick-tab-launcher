@@ -220,6 +220,26 @@ describe("i18n - user-facing wording", () => {
   });
 });
 
+describe("i18n - tCount()", () => {
+  const { tCount } = require("../src/i18n.js");
+
+  it("uses the singular form for one", () => {
+    setLocaleFromStorage("it");
+    expect(tCount("done.close-other-tabs", 1)).toBe("1 scheda chiusa");
+  });
+
+  it("uses the plural form for other counts", () => {
+    setLocaleFromStorage("it");
+    expect(tCount("done.close-other-tabs", 3)).toBe("3 schede chiuse");
+    expect(tCount("done.close-other-tabs", 0)).toBe("0 schede chiuse");
+  });
+
+  it("falls back to the plural key when no singular exists", () => {
+    setLocaleFromStorage("en");
+    expect(tCount("duplicates.item", 1, { title: "X" })).toBe("X (1 extra)");
+  });
+});
+
 describe("i18n - constants", () => {
   it("default locale is it", () => {
     expect(I18N_DEFAULT_LOCALE).toBe("it");

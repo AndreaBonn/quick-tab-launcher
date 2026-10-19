@@ -323,3 +323,164 @@ describe("restoreSession", () => {
     expect(browserMock.sessions.restore).toHaveBeenCalledWith("session-123");
   });
 });
+
+describe("getRecentTabs - current tab left out (A2)", () => {
+  let mod;
+
+  beforeEach(() => {
+    mod = loadTabCommands();
+  });
+
+  it("does not list the tab the user is on, so Enter goes back one tab", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, title: "Here", url: "https://here.com", lastAccessed: 300 },
+      { id: 2, title: "Before", url: "https://before.com", lastAccessed: 200 },
+    ]);
+
+    const result = await mod.getRecentTabs(1);
+
+    expect(result.recentActive.map((t) => t.id)).toEqual([2]);
+  });
+
+  it("keeps every tab when no current tab is given", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, title: "Here", url: "https://here.com", lastAccessed: 300 },
+      { id: 2, title: "Before", url: "https://before.com", lastAccessed: 200 },
+    ]);
+    const result = await mod.getRecentTabs();
+    expect(result.recentActive.map((t) => t.id)).toEqual([1, 2]);
+  });
+});
+
+describe("getDuplicateSummary (A4)", () => {
+  let mod;
+
+  beforeEach(() => {
+    mod = loadTabCommands();
+  });
+
+  it("names each duplicated page with how many extra copies it has", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, title: "PR", url: "https://gh.com/pr", active: true },
+      { id: 2, title: "PR", url: "https://gh.com/pr" },
+      { id: 3, title: "PR", url: "https://gh.com/pr" },
+      { id: 4, title: "MDN", url: "https://mdn.org/q" },
+      { id: 5, title: "MDN", url: "https://mdn.org/q" },
+      { id: 6, title: "Solo", url: "https://solo.com" },
+    ]);
+
+    const summary = await mod.getDuplicateSummary();
+
+    expect(summary.count).toBe(3);
+    expect(summary.groups).toEqual([
+      { title: "PR", url: "https://gh.com/pr", extra: 2 },
+      { title: "MDN", url: "https://mdn.org/q", extra: 1 },
+    ]);
+    expect(summary.more).toBe(0);
+  });
+
+  it("lists at most three pages and counts the rest", async () => {
+    const tabs = [];
+    for (let i = 0; i < 5; i++) {
+      tabs.push({ id: i * 2, title: `P${i}`, url: `https://p${i}.com` });
+      tabs.push({ id: i * 2 + 1, title: `P${i}`, url: `https://p${i}.com` });
+    }
+    browserMock.tabs.query.mockResolvedValue(tabs);
+
+    const summary = await mod.getDuplicateSummary();
+
+    expect(summary.count).toBe(5);
+    expect(summary.groups).toHaveLength(3);
+    expect(summary.more).toBe(2);
+  });
+
+  it("reports nothing when there are no duplicates", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, title: "A", url: "https://a.com" },
+    ]);
+    expect(await mod.getDuplicateSummary()).toEqual({
+      count: 0,
+      groups: [],
+      more: 0,
+    });
+  });
+});
+
+describe("previewCommand (C1)", () => {
+  let mod;
+
+  beforeEach(() => {
+    mod = loadTabCommands();
+  });
+
+  it("counts the tabs Close other tabs would close, skipping pinned ones", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, active: true },
+      { id: 2 },
+      { id: 3, pinned: true },
+      { id: 4 },
+    ]);
+    expect(await mod.previewCommand("close-other-tabs")).toEqual({
+      affected: 2,
+    });
+  });
+
+  it("counts the duplicate copies for Close duplicates", async () => {
+    browserMock.tabs.query.mockResolvedValue([
+      { id: 1, url: "https://a.com", active: true },
+      { id: 2, url: "https://a.com" },
+    ]);
+    expect(await mod.previewCommand("close-duplicates")).toEqual({
+      affected: 1,
+    });
+  });
+
+  it("returns zero for commands that close nothing", async () => {
+    expect(await mod.previewCommand("mute-tab")).toEqual({ affected: 0 });
+  });
+});
+
+describe("undoClose (R6)", () => {
+  let mod;
+
+  beforeEach(() => {
+    mod = loadTabCommands();
+  });
+
+  it("reopens as many tabs as were closed", async () => {
+    browserMock.sessions.restore.mockResolvedValue({ tab: {} });
+    expect(await mod.undoClose(3)).toEqual({ restored: 3 });
+    expect(browserMock.sessions.restore).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops when there is nothing left to reopen", async () => {
+    browserMock.sessions.restore
+      .mockResolvedValueOnce({ tab: {} })
+      .mockResolvedValueOnce(undefined);
+    expect(await mod.undoClose(3)).toEqual({ restored: 1 });
+  });
+});
+
+describe("getActiveTabState (C4)", () => {
+  let mod;
+
+  beforeEach(() => {
+    mod = loadTabCommands();
+  });
+
+  it("reads mute and pin state from the given tab", async () => {
+    expect(
+      await mod.getActiveTabState({ mutedInfo: { muted: true }, pinned: false }),
+    ).toEqual({ muted: true, pinned: false });
+  });
+
+  it("falls back to the active tab, and to null when there is none", async () => {
+    browserMock.tabs.query.mockResolvedValueOnce([{ id: 1, pinned: true }]);
+    expect(await mod.getActiveTabState()).toEqual({
+      muted: false,
+      pinned: true,
+    });
+    browserMock.tabs.query.mockResolvedValueOnce([]);
+    expect(await mod.getActiveTabState()).toBeNull();
+  });
+});

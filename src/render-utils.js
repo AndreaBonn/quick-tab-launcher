@@ -1,4 +1,4 @@
-/* global escapeHtml, highlightMatch, formatUrl, fuzzyMatch, highlightFuzzyMatch, groupTabsByDomain, t, createIcon */
+/* global escapeHtml, highlightMatch, formatUrl, fuzzyMatch, highlightFuzzyMatch, groupTabsByDomain, t, tCount, createIcon */
 
 const INITIAL_COLORS = [
   "#e06c75",
@@ -19,6 +19,8 @@ const SECTION_ICONS = {
   "recent-active": "tabs",
   "recent-closed": "restore",
   commands: "bolt",
+  "command-tabs": "tabs",
+  "command-current": "bolt",
 };
 
 // What Enter does on a row, shown on the selected one.
@@ -156,7 +158,7 @@ function createResultItem(item, sectionKey, query, index) {
     el.appendChild(badge);
   }
   if (ENTER_HINT_KEYS[sectionKey]) el.appendChild(createEnterHint(sectionKey));
-  if (sectionKey === "tabs") {
+  if (sectionKey === "tabs" || sectionKey === "recent-active") {
     const actions = createElement("div", "qal-result-actions");
     const closeBtn = createElement("button", "qal-close-tab");
     closeBtn.type = "button";
@@ -259,6 +261,77 @@ function renderGroupedResults(container, results, query, selectedIndex) {
   updateSelection(container, selectedIndex);
 }
 
+function createCommandItem(cmd, index) {
+  const el = createElement("div", "qal-result-item qal-command-item");
+  el.setAttribute("role", "option");
+  el.setAttribute("aria-selected", "false");
+  el.dataset.type = "command";
+  el.dataset.id = cmd.id;
+  el.dataset.index = index;
+
+  const icon = createElement("span", "qal-command-icon");
+  appendIcon(icon, cmd.icon);
+  const textContainer = createElement("div", "qal-result-text");
+  const label = createElement("span", "qal-result-title");
+  label.innerHTML =
+    cmd.matchIndices && typeof highlightFuzzyMatch === "function"
+      ? highlightFuzzyMatch(cmd.label, cmd.matchIndices)
+      : escapeHtml(cmd.label);
+  const desc = createElement("span", "qal-result-url qal-command-desc");
+  desc.textContent = cmd.description;
+  textContainer.append(label, desc);
+
+  el.append(icon, textContainer, createEnterHint("command"));
+  return el;
+}
+
+/**
+ * Appends a section of commands after the rows already in the container.
+ *
+ * @param {HTMLElement} container - Results container.
+ * @param {Array<object>} commands - Commands to list.
+ * @param {number} startIndex - Index of the first command in the flat list.
+ * @param {string} [sectionKey] - Section title key under "sections.".
+ */
+function appendCommandSection(
+  container,
+  commands,
+  startIndex,
+  sectionKey = "commands",
+) {
+  const section = createElement("div", "qal-section");
+  section.dataset.section = sectionKey;
+  section.appendChild(createSectionHeader(sectionKey, commands.length));
+  commands.forEach((cmd, i) => {
+    section.appendChild(createCommandItem(cmd, startIndex + i));
+  });
+  container.appendChild(section);
+}
+
+/**
+ * Search view shared by the overlay and the popup: results (flat or by site),
+ * then matching actions, or the empty state with tips when nothing matches.
+ *
+ * @param {HTMLElement} container - Results container.
+ * @param {object} view - { results, commands, query, selectedIndex, grouped, tips }.
+ */
+function renderSearchView(container, view) {
+  const { results, commands, query, selectedIndex, grouped, tips } = view;
+  const total =
+    results.tabs.length + results.bookmarks.length + results.history.length;
+  if (total === 0 && commands.length === 0) {
+    renderNoResults(container, query, tips);
+    return;
+  }
+  const render = grouped ? renderGroupedResults : renderResults;
+  if (total > 0) render(container, results, query, selectedIndex);
+  else container.textContent = "";
+  if (commands.length > 0) {
+    appendCommandSection(container, commands, total);
+    updateSelection(container, selectedIndex);
+  }
+}
+
 function renderCommandResults(container, commands, query, selectedIndex) {
   container.innerHTML = "";
   if (commands.length === 0) {
@@ -266,36 +339,20 @@ function renderCommandResults(container, commands, query, selectedIndex) {
     return;
   }
 
-  const section = createElement("div", "qal-section");
-  section.dataset.section = "commands";
-  section.appendChild(createSectionHeader("commands", commands.length));
-
-  for (let i = 0; i < commands.length; i++) {
-    const cmd = commands[i];
-    const el = createElement("div", "qal-result-item qal-command-item");
-    el.setAttribute("role", "option");
-    el.setAttribute("aria-selected", "false");
-    el.dataset.type = "command";
-    el.dataset.id = cmd.id;
-    el.dataset.index = i;
-
-    const icon = createElement("span", "qal-command-icon");
-    appendIcon(icon, cmd.icon);
-    const textContainer = createElement("div", "qal-result-text");
-    const label = createElement("span", "qal-result-title");
-    label.innerHTML =
-      cmd.matchIndices && typeof highlightFuzzyMatch === "function"
-        ? highlightFuzzyMatch(cmd.label, cmd.matchIndices)
-        : escapeHtml(cmd.label);
-    const desc = createElement("span", "qal-result-url qal-command-desc");
-    desc.textContent = cmd.description;
-    textContainer.append(label, desc);
-
-    el.append(icon, textContainer, createEnterHint("command"));
-    section.appendChild(el);
+  // Unfiltered list: one section per group, in the registry order the caller
+  // already uses for its flat list. Filtered list: one section by relevance.
+  const isGrouped = !query && commands.every((cmd) => cmd.group);
+  if (isGrouped) {
+    let index = 0;
+    for (const group of ["tabs", "current"]) {
+      const inGroup = commands.filter((cmd) => cmd.group === group);
+      if (inGroup.length === 0) continue;
+      appendCommandSection(container, inGroup, index, `command-${group}`);
+      index += inGroup.length;
+    }
+  } else {
+    appendCommandSection(container, commands, 0);
   }
-
-  container.appendChild(section);
   updateSelection(container, selectedIndex);
 }
 
@@ -341,17 +398,49 @@ function renderRecentTabs(container, recentData) {
   }
 }
 
-function renderDuplicateBanner(container, count) {
+/**
+ * Shows which pages are open more than once, with Close and Not now.
+ *
+ * @param {HTMLElement} container - Results container.
+ * @param {{count: number, groups?: Array, more?: number}} summary - From
+ *   the background "get-duplicate-count" message.
+ */
+function renderDuplicateBanner(container, summary) {
+  const { count, groups = [], more = 0 } = summary;
   if (count <= 0) return;
   const existing = container.querySelector(".qal-duplicate-banner");
   if (existing) existing.remove();
 
   const banner = createElement("div", "qal-duplicate-banner");
-  const text = createElement("span", "qal-duplicate-text");
-  text.textContent = t("duplicates.banner", { count: String(count) });
-  const btn = createElement("button", "qal-duplicate-action");
-  btn.textContent = t("duplicates.closeAll");
-  banner.append(text, btn);
+  const text = createElement("div", "qal-duplicate-text");
+  const headline = createElement("span", "qal-duplicate-headline");
+  headline.textContent = tCount("duplicates.banner", count);
+  text.appendChild(headline);
+  if (groups.length > 0) {
+    const list = createElement("ul", "qal-duplicate-list");
+    for (const group of groups) {
+      const li = createElement("li", "");
+      li.textContent = tCount("duplicates.item", group.extra, {
+        title: group.title,
+      });
+      list.appendChild(li);
+    }
+    if (more > 0) {
+      const li = createElement("li", "");
+      li.textContent = tCount("duplicates.more", more);
+      list.appendChild(li);
+    }
+    text.appendChild(list);
+  }
+  const actions = createElement("div", "qal-duplicate-actions");
+  const closeBtn = createElement("button", "qal-duplicate-action");
+  closeBtn.type = "button";
+  closeBtn.textContent = t("duplicates.closeAll");
+  const dismissBtn = createElement("button", "qal-duplicate-dismiss");
+  dismissBtn.type = "button";
+  dismissBtn.textContent = t("duplicates.dismiss");
+  actions.append(closeBtn, dismissBtn);
+  banner.append(text, actions);
   container.insertBefore(banner, container.firstChild);
 }
 
@@ -362,11 +451,53 @@ function renderEmpty(container) {
   container.appendChild(empty);
 }
 
-function renderNoResults(container, query) {
+function createTip(text, action, actionLabel) {
+  const li = createElement("li", "");
+  li.textContent = text + (action ? " " : "");
+  if (action) {
+    const btn = createElement("button", "qal-link-btn");
+    btn.type = "button";
+    btn.dataset.qalAction = action;
+    btn.textContent = actionLabel;
+    li.appendChild(btn);
+  }
+  return li;
+}
+
+/**
+ * Empty result state. With `tips`, also suggests what to try next.
+ *
+ * @param {HTMLElement} container - Results container.
+ * @param {string} query - Search text, echoed back.
+ * @param {{fulltextEnabled: boolean, historyDays: number}} [tips]
+ */
+function renderNoResults(container, query, tips) {
   container.innerHTML = "";
   const empty = createElement("div", "qal-empty-state");
-  const safeQuery = escapeHtml(query);
-  empty.innerHTML = t("states.noResults", { query: safeQuery });
+  const message = createElement("p", "qal-empty-message");
+  message.innerHTML = t("states.noResults", { query: escapeHtml(query) });
+  empty.appendChild(message);
+  if (tips) {
+    const list = createElement("ul", "qal-tips");
+    list.appendChild(createTip(t("noResults.tipShorter")));
+    if (!tips.fulltextEnabled) {
+      list.appendChild(
+        createTip(
+          t("noResults.tipFulltext"),
+          "enable-fulltext",
+          t("noResults.enableFulltext"),
+        ),
+      );
+    }
+    list.appendChild(
+      createTip(
+        t("noResults.tipHistory", { days: String(tips.historyDays) }),
+        "open-options",
+        t("noResults.openSettings"),
+      ),
+    );
+    empty.appendChild(list);
+  }
   container.appendChild(empty);
 }
 
@@ -423,6 +554,8 @@ if (typeof module !== "undefined" && module.exports) {
     fuzzyHighlightOrFallback,
     hashCode,
     reindexItems,
+    appendCommandSection,
+    renderSearchView,
     renderCommandResults,
     renderDuplicateBanner,
     renderEmpty,

@@ -10,6 +10,10 @@
   padding: 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .qal-overlay {
   --qal-bg: #ffffff;
   --qal-bg-panel: #f8f9fa;
@@ -24,9 +28,11 @@
   --qal-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
   --qal-radius: 12px;
   --qal-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --qal-warning: #d97706;
+  --qal-warning: #92400e;
   --qal-warning-bg: #fef3c7;
   --qal-warning-border: #fde68a;
+  --qal-danger: #b42318;
+  --qal-danger-bg: #fef0ee;
 
   position: fixed;
   inset: 0;
@@ -53,6 +59,8 @@
     --qal-warning: #f59e0b;
     --qal-warning-bg: #422006;
     --qal-warning-border: #92400e;
+    --qal-danger: #ff9b8f;
+    --qal-danger-bg: #3d1714;
   }
 }
 
@@ -224,7 +232,8 @@
   display: inline;
 }
 
-.qal-result-item:hover .qal-close-tab {
+.qal-result-item:hover .qal-close-tab,
+.qal-result-item.qal-selected .qal-close-tab {
   opacity: 1;
 }
 
@@ -411,7 +420,41 @@ button.qal-hint:hover {
 
 .qal-duplicate-text {
   flex: 1;
+  min-width: 0;
   font-weight: 500;
+}
+
+.qal-duplicate-list {
+  list-style: none;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+.qal-duplicate-list li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qal-duplicate-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.qal-duplicate-dismiss {
+  font: 600 11px/1.2 var(--qal-font);
+  color: var(--qal-warning);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.qal-duplicate-dismiss:hover {
+  border-color: var(--qal-warning-border);
 }
 
 .qal-duplicate-action {
@@ -524,4 +567,182 @@ button.qal-hint:hover {
   border-radius: 0;
   box-shadow: none;
   animation: none;
+}
+
+/* --- Settings button --- */
+
+.qal-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--qal-text-secondary);
+  background: transparent;
+  border: 1px solid var(--qal-border);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.qal-icon-btn:hover {
+  background: var(--qal-hover);
+  color: var(--qal-text-primary);
+}
+
+.qal-icon-btn:focus-visible,
+.qal-chip:focus-visible,
+.qal-link-btn:focus-visible,
+.qal-toast-undo:focus-visible,
+.qal-duplicate-action:focus-visible,
+.qal-duplicate-dismiss:focus-visible {
+  outline: 2px solid var(--qal-accent);
+  outline-offset: 2px;
+}
+
+/* --- Quick actions and first-run guide --- */
+
+.qal-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 0;
+  font-size: 11px;
+  color: var(--qal-text-secondary);
+}
+
+.qal-chip {
+  font: 500 11.5px/1.3 var(--qal-font);
+  color: var(--qal-text-primary);
+  background: var(--qal-bg-panel);
+  border: 1px solid var(--qal-border);
+  border-radius: 99px;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.qal-chip:hover {
+  border-color: var(--qal-accent);
+}
+
+.qal-guide {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--qal-text-secondary);
+  background: var(--qal-selected);
+  border-radius: 8px;
+}
+
+.qal-guide-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.qal-guide-text strong {
+  color: var(--qal-text-primary);
+}
+
+.qal-link-btn {
+  font: 600 12.5px/1.3 var(--qal-font);
+  color: var(--qal-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.qal-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* --- Toasts: in the panel (R6) and on the page after an action (C2) --- */
+
+.qal-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 16px 0;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--qal-bg);
+  background: var(--qal-text-primary);
+  border-radius: 8px;
+}
+
+.qal-toast-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qal-toast-undo {
+  font: 700 12.5px/1.2 var(--qal-font);
+  color: inherit;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.qal-page-toast-slot {
+  --qal-bg: #ffffff;
+  --qal-text-primary: #24292f;
+  --qal-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  font-family: var(--qal-font);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.qal-page-toast-slot:empty {
+  display: none;
+}
+
+.qal-page-toast-slot .qal-toast {
+  margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qal-page-toast-slot {
+    --qal-bg: #1c1e23;
+    --qal-text-primary: #e6edf3;
+  }
+}
+
+/* --- Confirmation before closing several tabs (C1) --- */
+
+.qal-confirm {
+  margin: 0 16px 6px 50px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--qal-danger);
+  background: var(--qal-danger-bg);
+  border-radius: 6px;
+}
+
+/* --- No results tips (R8) --- */
+
+.qal-tips {
+  list-style: none;
+  max-width: 440px;
+  margin: 12px auto 0;
+  text-align: left;
+  line-height: 1.6;
 }

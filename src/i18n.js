@@ -26,8 +26,6 @@ const I18N_MESSAGES = {
     "states.noResults": "Nessun risultato per \u00ab{{query}}\u00bb",
     "states.loading": "Ricerca in corso...",
     "states.error": "Errore durante la ricerca. Riprova.",
-    "duplicates.banner": "{{count}} schede duplicate trovate",
-    "duplicates.closeAll": "Chiudi duplicati",
     "actions.closeDomainTabs": "Chiudi schede di {{domain}}",
     "commands.close-other-tabs": "Chiudi le altre schede",
     "commands.close-other-tabs.desc":
@@ -100,6 +98,58 @@ const I18N_MESSAGES = {
     "launcher.groupToggle": "Per sito",
     "launcher.groupToggle.tooltip": "Raggruppa le schede per sito (Alt+G)",
     "launcher.inputLabel": "Cerca schede, segnalibri e cronologia",
+    "guide.title": "Prime volte qui?",
+    "guide.body":
+      "Scrivi per cercare fra schede aperte, segnalibri e cronologia. Invio apre il risultato evidenziato, > mostra le azioni sulle schede.",
+    "guide.dismiss": "Ho capito",
+    "quick.label": "Azioni:",
+    "quick.all": "Tutte (>)",
+    "quick.close-duplicates": "Chiudi doppie",
+    "quick.mute-tab": "Silenzia",
+    "quick.unmute-tab": "Riattiva audio",
+    "quick.pin-tab": "Fissa",
+    "quick.unpin-tab": "Sblocca",
+    "duplicates.banner": "{{count}} schede doppie",
+    "duplicates.banner.one": "1 scheda doppia",
+    "duplicates.item": "{{title}} ({{count}} in più)",
+    "duplicates.more": "e altre {{count}} pagine",
+    "duplicates.more.one": "e un'altra pagina",
+    "duplicates.closeAll": "Chiudi le copie",
+    "duplicates.dismiss": "Non ora",
+    "toast.tabClosed": "Scheda chiusa: {{title}}",
+    "toast.undo": "Annulla",
+    "toast.undo.tooltip": "Riapri le schede appena chiuse (Alt+Z)",
+    "toast.restored": "Schede riaperte",
+    "done.close-other-tabs": "{{count}} schede chiuse",
+    "done.close-other-tabs.one": "1 scheda chiusa",
+    "done.close-duplicates": "{{count}} schede doppie chiuse",
+    "done.close-duplicates.one": "1 scheda doppia chiusa",
+    "done.close-domain": "{{count}} schede di {{domain}} chiuse",
+    "done.close-domain.one": "1 scheda di {{domain}} chiusa",
+    "done.mute-tab": "Scheda silenziata",
+    "done.unmute-tab": "Audio della scheda riattivato",
+    "done.pin-tab": "Scheda fissata",
+    "done.unpin-tab": "Scheda sbloccata",
+    "done.duplicate-tab": "Scheda duplicata",
+    "done.sort-tabs-title": "Schede ordinate dalla A alla Z",
+    "done.nothing": "Nessuna scheda da chiudere",
+    "done.failed": "L'azione non è riuscita",
+    "confirm.closeTabs":
+      "Chiuderà {{count}} schede. Premi Invio di nuovo per confermare, Esc per annullare.",
+    "confirm.closeTabs.one":
+      "Chiuderà 1 scheda. Premi Invio di nuovo per confermare, Esc per annullare.",
+    "noResults.tipShorter":
+      "Prova con meno parole o con una parte del nome del sito.",
+    "noResults.tipFulltext":
+      "La parola può essere nel testo di una pagina aperta:",
+    "noResults.enableFulltext": "cerca anche nel testo",
+    "noResults.tipHistory": "La cronologia copre gli ultimi {{days}} giorni:",
+    "noResults.openSettings": "cambia nelle impostazioni",
+    "sections.command-tabs": "Schede",
+    "sections.command-current": "Scheda attuale",
+    "launcher.settings": "Impostazioni",
+    "hints.closeTab": "chiudi scheda",
+    "hints.undo": "annulla",
   },
   en: {
     "launcher.placeholder": "Search tabs, bookmarks, history, or > actions",
@@ -122,8 +172,6 @@ const I18N_MESSAGES = {
     "states.noResults": "No results for \u00ab{{query}}\u00bb",
     "states.loading": "Searching...",
     "states.error": "Search error. Try again.",
-    "duplicates.banner": "{{count}} duplicate tabs found",
-    "duplicates.closeAll": "Close duplicates",
     "actions.closeDomainTabs": "Close tabs from {{domain}}",
     "commands.close-other-tabs": "Close other tabs",
     "commands.close-other-tabs.desc":
@@ -192,6 +240,56 @@ const I18N_MESSAGES = {
     "launcher.groupToggle": "By site",
     "launcher.groupToggle.tooltip": "Group tabs by site (Alt+G)",
     "launcher.inputLabel": "Search tabs, bookmarks and history",
+    "guide.title": "New here?",
+    "guide.body":
+      "Type to search open tabs, bookmarks and history. Enter opens the highlighted result, > shows tab actions.",
+    "guide.dismiss": "Got it",
+    "quick.label": "Actions:",
+    "quick.all": "All (>)",
+    "quick.close-duplicates": "Close duplicates",
+    "quick.mute-tab": "Mute",
+    "quick.unmute-tab": "Unmute",
+    "quick.pin-tab": "Pin",
+    "quick.unpin-tab": "Unpin",
+    "duplicates.banner": "{{count}} duplicate tabs",
+    "duplicates.banner.one": "1 duplicate tab",
+    "duplicates.item": "{{title}} ({{count}} extra)",
+    "duplicates.more": "and {{count}} more pages",
+    "duplicates.more.one": "and 1 more page",
+    "duplicates.closeAll": "Close copies",
+    "duplicates.dismiss": "Not now",
+    "toast.tabClosed": "Tab closed: {{title}}",
+    "toast.undo": "Undo",
+    "toast.undo.tooltip": "Reopen the tabs just closed (Alt+Z)",
+    "toast.restored": "Tabs reopened",
+    "done.close-other-tabs": "{{count}} tabs closed",
+    "done.close-other-tabs.one": "1 tab closed",
+    "done.close-duplicates": "{{count}} duplicate tabs closed",
+    "done.close-duplicates.one": "1 duplicate tab closed",
+    "done.close-domain": "{{count}} tabs from {{domain}} closed",
+    "done.close-domain.one": "1 tab from {{domain}} closed",
+    "done.mute-tab": "Tab muted",
+    "done.unmute-tab": "Tab sound turned back on",
+    "done.pin-tab": "Tab pinned",
+    "done.unpin-tab": "Tab unpinned",
+    "done.duplicate-tab": "Tab duplicated",
+    "done.sort-tabs-title": "Tabs sorted A to Z",
+    "done.nothing": "No tabs to close",
+    "done.failed": "The action did not work",
+    "confirm.closeTabs":
+      "This closes {{count}} tabs. Press Enter again to confirm, Esc to cancel.",
+    "confirm.closeTabs.one":
+      "This closes 1 tab. Press Enter again to confirm, Esc to cancel.",
+    "noResults.tipShorter": "Try fewer words, or part of the site's name.",
+    "noResults.tipFulltext": "The word may be in the text of an open page:",
+    "noResults.enableFulltext": "search page text too",
+    "noResults.tipHistory": "History covers the last {{days}} days:",
+    "noResults.openSettings": "change it in settings",
+    "sections.command-tabs": "Tabs",
+    "sections.command-current": "Current tab",
+    "launcher.settings": "Settings",
+    "hints.closeTab": "close tab",
+    "hints.undo": "undo",
   },
 };
 
@@ -211,6 +309,25 @@ function t(key, params) {
     }
   }
   return message;
+}
+
+/**
+ * Like t(), with a count: uses the "<key>.one" variant for 1 when it exists.
+ *
+ * @param {string} key - Message key for the plural form.
+ * @param {number} count - Quantity, also passed as {{count}}.
+ * @param {object} [params] - Extra interpolation values.
+ * @returns {string}
+ */
+function tCount(key, count, params = {}) {
+  const dict =
+    I18N_MESSAGES[i18nCurrentLocale] || I18N_MESSAGES[I18N_DEFAULT_LOCALE];
+  const singularKey = key + ".one";
+  const useSingular = count === 1 && dict[singularKey] !== undefined;
+  return t(useSingular ? singularKey : key, {
+    ...params,
+    count: String(count),
+  });
 }
 
 function getLocale() {
@@ -276,6 +393,7 @@ if (typeof module !== "undefined" && module.exports) {
     I18N_SUPPORTED_LOCALES,
     I18N_MESSAGES,
     t,
+    tCount,
     getLocale,
     loadLocale,
     setLocale,

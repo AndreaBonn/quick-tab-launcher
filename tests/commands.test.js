@@ -17,6 +17,8 @@ const {
   filterCommands,
   getCommandLabel,
   getCommandDescription,
+  isCommandApplicable,
+  matchCommandsForSearch,
 } = require("../src/commands.js");
 
 describe("COMMANDS", () => {
@@ -109,5 +111,83 @@ describe("filterCommands", () => {
       expect(r.id).toBeTruthy();
       expect(r.icon).toBeTruthy();
     }
+  });
+});
+
+describe("command groups (C3)", () => {
+  it("lists whole-window actions before current-tab actions", () => {
+    const groups = COMMANDS.map((c) => c.group);
+    expect(new Set(groups)).toEqual(new Set(["tabs", "current"]));
+    expect(groups.indexOf("current")).toBeGreaterThan(
+      groups.lastIndexOf("tabs"),
+    );
+  });
+
+  it("asks for confirmation only on commands that close several tabs (C1)", () => {
+    const confirmed = COMMANDS.filter((c) => c.confirm).map((c) => c.id);
+    expect(confirmed.sort()).toEqual(["close-duplicates", "close-other-tabs"]);
+  });
+});
+
+describe("isCommandApplicable (C4)", () => {
+  const byId = (id) => COMMANDS.find((c) => c.id === id);
+
+  it("offers Mute on an audible tab and hides Unmute", () => {
+    const tab = { muted: false, pinned: false };
+    expect(isCommandApplicable(byId("mute-tab"), tab)).toBe(true);
+    expect(isCommandApplicable(byId("unmute-tab"), tab)).toBe(false);
+  });
+
+  it("offers Unmute and Unpin on a muted pinned tab", () => {
+    const tab = { muted: true, pinned: true };
+    expect(isCommandApplicable(byId("unmute-tab"), tab)).toBe(true);
+    expect(isCommandApplicable(byId("mute-tab"), tab)).toBe(false);
+    expect(isCommandApplicable(byId("unpin-tab"), tab)).toBe(true);
+    expect(isCommandApplicable(byId("pin-tab"), tab)).toBe(false);
+  });
+
+  it("shows every command when the tab state is unknown", () => {
+    for (const cmd of COMMANDS) {
+      expect(isCommandApplicable(cmd, null)).toBe(true);
+    }
+  });
+
+  it("filterCommands drops the non-applicable toggle", () => {
+    const ids = filterCommands("", { muted: false, pinned: false }).map(
+      (c) => c.id,
+    );
+    expect(ids).toContain("mute-tab");
+    expect(ids).not.toContain("unmute-tab");
+    expect(ids).not.toContain("unpin-tab");
+  });
+});
+
+describe("matchCommandsForSearch (R7)", () => {
+  it("finds an action by a word of its label without the > prefix", () => {
+    const ids = matchCommandsForSearch("silenzia", null).map((c) => c.id);
+    expect(ids).toEqual(["mute-tab"]);
+  });
+
+  it("matches word starts, case-insensitive", () => {
+    const ids = matchCommandsForSearch("Duplica", null).map((c) => c.id);
+    expect(ids).toContain("duplicate-tab");
+  });
+
+  it("ignores short queries to keep normal searches clean", () => {
+    expect(matchCommandsForSearch("ch", null)).toEqual([]);
+  });
+
+  it("does not match scattered letters the way fuzzy search would", () => {
+    expect(matchCommandsForSearch("git", null)).toEqual([]);
+    expect(matchCommandsForSearch("chisc", null)).toEqual([]);
+  });
+
+  it("respects the current tab state", () => {
+    const ids = matchCommandsForSearch("scheda", {
+      muted: false,
+      pinned: false,
+    }).map((c) => c.id);
+    expect(ids).toContain("mute-tab");
+    expect(ids).not.toContain("unmute-tab");
   });
 });

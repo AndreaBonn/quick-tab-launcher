@@ -17,7 +17,9 @@ const { fuzzyMatch, highlightFuzzyMatch } = require("../src/fuzzy.js");
 globalThis.fuzzyMatch = fuzzyMatch;
 globalThis.highlightFuzzyMatch = highlightFuzzyMatch;
 
-const { t } = require("../src/i18n.js");
+const { t, tCount } = require("../src/i18n.js");
+
+globalThis.tCount = tCount;
 
 globalThis.t = t;
 
@@ -259,7 +261,7 @@ describe("renderDuplicateBanner", () => {
   });
 
   it("renders banner with count and action button", () => {
-    renderDuplicateBanner(container, 3);
+    renderDuplicateBanner(container, { count: 3 });
     const banner = container.querySelector(".qal-duplicate-banner");
     expect(banner).toBeTruthy();
     expect(banner.querySelector(".qal-duplicate-text").textContent).toContain(
@@ -270,18 +272,18 @@ describe("renderDuplicateBanner", () => {
 
   it("inserts banner at top of container", () => {
     container.appendChild(document.createElement("div"));
-    renderDuplicateBanner(container, 2);
+    renderDuplicateBanner(container, { count: 2 });
     expect(container.firstChild.className).toBe("qal-duplicate-banner");
   });
 
   it("does not render for count <= 0", () => {
-    renderDuplicateBanner(container, 0);
+    renderDuplicateBanner(container, { count: 0 });
     expect(container.querySelector(".qal-duplicate-banner")).toBeNull();
   });
 
   it("removes existing banner before adding new one", () => {
-    renderDuplicateBanner(container, 2);
-    renderDuplicateBanner(container, 5);
+    renderDuplicateBanner(container, { count: 2 });
+    renderDuplicateBanner(container, { count: 5 });
     const banners = container.querySelectorAll(".qal-duplicate-banner");
     expect(banners).toHaveLength(1);
     expect(

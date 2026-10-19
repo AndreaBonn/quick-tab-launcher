@@ -99,7 +99,16 @@ async function loadLauncher(browserMock) {
   globalThis.renderError = renderError;
   globalThis.updateSelection = updateSelection;
   globalThis.reindexItems = reindexItems;
-  Object.assign(globalThis, require("../src/icons.js"), require("../src/hints.js"));
+  Object.assign(
+    globalThis,
+    require("../src/icons.js"),
+    require("../src/hints.js"),
+    require("../src/panel-extras.js"),
+    require("../src/onboarding.js"),
+    require("../src/render-utils.js"),
+    require("../src/commands.js"),
+    { tCount: require("../src/i18n.js").tCount },
+  );
 
   let capturedShadowRoot = null;
   const originalAttachShadow = HTMLElement.prototype.attachShadow;
@@ -660,8 +669,9 @@ describe("launcher.js - close tab via click", () => {
     expect(browserMock.runtime.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ action: "close-tab", tabId: 10 }),
     );
-    const remaining = shadowRoot.querySelectorAll(".qal-result-item");
-    expect(remaining).toHaveLength(1);
+    await vi.waitFor(() =>
+      expect(shadowRoot.querySelectorAll(".qal-result-item")).toHaveLength(1),
+    );
   });
 
   it("removes the tabs section when the last tab is closed", async () => {
@@ -680,10 +690,11 @@ describe("launcher.js - close tab via click", () => {
     const closeBtn = shadowRoot.querySelector(".qal-close-tab");
     closeBtn.click();
 
-    const tabSection = shadowRoot.querySelector(
-      '.qal-section[data-section="tabs"]',
+    await vi.waitFor(() =>
+      expect(
+        shadowRoot.querySelector('.qal-section[data-section="tabs"]'),
+      ).toBeNull(),
     );
-    expect(tabSection).toBeNull();
   });
 });
 

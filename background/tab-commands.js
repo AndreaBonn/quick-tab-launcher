@@ -125,10 +125,17 @@ async function closeDomainTabs(domain) {
   return { closed: toClose.length };
 }
 
-async function getRecentTabs() {
+/**
+ * Recent tabs and recently closed ones for the empty launcher.
+ *
+ * @param {number} [excludeTabId] - Tab the user is on: listing it first would
+ *   make Enter a no-op, so it is left out.
+ */
+async function getRecentTabs(excludeTabId) {
   const [recentActive, recentlyClosed] = await Promise.all([
     browser.tabs.query({}).then((tabs) =>
-      [...tabs]
+      tabs
+        .filter((tab) => tab.id !== excludeTabId)
         .sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))
         .slice(0, 8)
         .map((tab) => ({
@@ -161,6 +168,75 @@ async function restoreSession(sessionId) {
   await browser.sessions.restore(sessionId);
 }
 
+const MAX_DUPLICATE_GROUPS_LISTED = 3;
+
+/**
+ * Duplicate tabs grouped by page, for the banner that lists them.
+ *
+ * @returns {Promise<{count: number, groups: Array<{title: string, url: string, extra: number}>, more: number}>}
+ */
+async function getDuplicateSummary() {
+  const duplicates = await findDuplicateTabs();
+  const groups = duplicates.map((g) => ({
+    title: g.keep.title || g.keep.url || "",
+    url: g.keep.url || "",
+    extra: g.dupes.length,
+  }));
+  return {
+    count: groups.reduce((sum, g) => sum + g.extra, 0),
+    groups: groups.slice(0, MAX_DUPLICATE_GROUPS_LISTED),
+    more: Math.max(0, groups.length - MAX_DUPLICATE_GROUPS_LISTED),
+  };
+}
+
+/**
+ * How many tabs a closing command would close, so the user can confirm.
+ *
+ * @param {string} commandId - Command to preview.
+ * @returns {Promise<{affected: number}>}
+ */
+async function previewCommand(commandId) {
+  if (commandId === "close-other-tabs") {
+    const tabs = await browser.tabs.query({ currentWindow: true });
+    return { affected: tabs.filter((t) => !t.active && !t.pinned).length };
+  }
+  if (commandId === "close-duplicates") {
+    return { affected: await getDuplicateCount() };
+  }
+  return { affected: 0 };
+}
+
+/**
+ * Reopens the last `count` closed tabs, most recent first.
+ *
+ * @param {number} count - Number of tabs to reopen.
+ * @returns {Promise<{restored: number}>}
+ */
+async function undoClose(count) {
+  let restored = 0;
+  for (let i = 0; i < count; i++) {
+    const session = await browser.sessions.restore();
+    if (!session) break;
+    restored++;
+  }
+  return { restored };
+}
+
+/**
+ * Mute and pin state of a tab, used to show only the applicable command.
+ *
+ * @param {object} [tab] - Tab object; the active tab is queried when absent.
+ * @returns {Promise<{muted: boolean, pinned: boolean}|null>}
+ */
+async function getActiveTabState(tab) {
+  const target = tab || (await getActiveTab());
+  if (!target) return null;
+  return {
+    muted: Boolean(target.mutedInfo?.muted),
+    pinned: Boolean(target.pinned),
+  };
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     executeCommand,
@@ -175,5 +251,9 @@ if (typeof module !== "undefined" && module.exports) {
     closeDomainTabs,
     getRecentTabs,
     restoreSession,
+    getDuplicateSummary,
+    previewCommand,
+    undoClose,
+    getActiveTabState,
   };
 }

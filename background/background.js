@@ -1,4 +1,7 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, fuzzyScore, deduplicateResults, executeCommand, getDuplicateCount, getRecentTabs, restoreSession, closeDomainTabs */
+/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, fuzzyScore, deduplicateResults, executeCommand, getRecentTabs, restoreSession, closeDomainTabs, closeDuplicateTabs, getDuplicateSummary, previewCommand, undoClose, getActiveTabState */
+
+const PRODUCT_NAME = "Quick Tab Launcher";
+const TOGGLE_COMMAND = "toggle-launcher";
 
 const PRIVILEGED_URL_PATTERNS = [
   /^about:/,
@@ -9,7 +12,13 @@ const PRIVILEGED_URL_PATTERNS = [
   /^data:/,
   /^javascript:/i,
   /^vbscript:/i,
+  // Firefox blocks content scripts on the add-ons site.
+  /^https:\/\/addons\.mozilla\.org\//,
 ];
+
+// Read synchronously by the shortcut handler: openPopup() only works while
+// the keyboard shortcut still counts as a user action, i.e. before any await.
+let isActiveTabPrivileged = false;
 
 function isPrivilegedUrl(url) {
   if (!url) return true;
@@ -19,7 +28,8 @@ function isPrivilegedUrl(url) {
 async function updatePopupForTab(tabId) {
   try {
     const tab = await browser.tabs.get(tabId);
-    if (isPrivilegedUrl(tab.url)) {
+    isActiveTabPrivileged = isPrivilegedUrl(tab.url);
+    if (isActiveTabPrivileged) {
       await browser.browserAction.setPopup({ popup: "popup/popup.html" });
     } else {
       await browser.browserAction.setPopup({ popup: "" });
@@ -44,23 +54,66 @@ browser.storage.onChanged.addListener((changes, area) => {
 
 initConfig();
 
+async function resolveCurrentTabId(sender) {
+  if (sender.tab?.id) return sender.tab.id;
+  const [activeTab] = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  return activeTab?.id;
+}
+
+// Tabs opened before install or update have no content script yet: inject
+// the same files the manifest declares, in the same order.
+async function injectLauncher(tabId) {
+  const [contentScript] = browser.runtime.getManifest().content_scripts;
+  for (const file of contentScript.js) {
+    await browser.tabs.executeScript(tabId, { file });
+  }
+}
+
 async function toggleLauncher() {
+  const [activeTab] = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  if (!activeTab?.id) return;
   try {
-    const [activeTab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (!activeTab?.id) return;
     await browser.tabs.sendMessage(activeTab.id, { action: "toggle" });
-  } catch (err) {
-    console.log("Quick TAB Launcher: pagina non supportata", err.message);
+  } catch {
+    // Tab opened before install: no content script yet, inject and retry.
+    try {
+      await injectLauncher(activeTab.id);
+      await browser.tabs.sendMessage(activeTab.id, { action: "toggle" });
+    } catch (err) {
+      console.log("Quick TAB Launcher: pagina non supportata", err.message);
+    }
   }
 }
 
 browser.commands.onCommand.addListener(async (command) => {
-  if (command !== "toggle-launcher") return;
+  if (command !== TOGGLE_COMMAND) return;
+  if (isActiveTabPrivileged) {
+    browser.browserAction.openPopup().catch((err) => {
+      console.log("Quick TAB Launcher: popup non aperto", err.message);
+    });
+    return;
+  }
   await toggleLauncher();
 });
+
+async function refreshActionTitle() {
+  try {
+    const commands = await browser.commands.getAll();
+    const shortcut = commands.find((c) => c.name === TOGGLE_COMMAND)?.shortcut;
+    const title = shortcut ? `${PRODUCT_NAME} (${shortcut})` : PRODUCT_NAME;
+    await browser.browserAction.setTitle({ title });
+  } catch (err) {
+    console.warn("Quick TAB Launcher: title update failed", err);
+  }
+}
+
+refreshActionTitle();
 
 browser.browserAction.onClicked.addListener(async () => {
   await toggleLauncher();
@@ -100,13 +153,40 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "close-tab") {
-    handleCloseTab(message.tabId);
-    return false;
+    handleCloseTab(message.tabId).then(() => sendResponse({ closed: 1 }));
+    return true;
   }
 
   if (message.action === "get-recent-tabs") {
-    getRecentTabs().then(sendResponse);
+    resolveCurrentTabId(sender)
+      .then((tabId) => getRecentTabs(tabId))
+      .then(sendResponse);
     return true;
+  }
+
+  if (message.action === "get-active-tab-state") {
+    getActiveTabState(sender.tab).then(sendResponse);
+    return true;
+  }
+
+  if (message.action === "preview-command") {
+    previewCommand(message.commandId).then(sendResponse);
+    return true;
+  }
+
+  if (message.action === "undo-close") {
+    undoClose(message.count).then(sendResponse);
+    return true;
+  }
+
+  if (message.action === "open-options") {
+    browser.runtime.openOptionsPage();
+    return false;
+  }
+
+  if (message.action === "refresh-action-title") {
+    refreshActionTitle();
+    return false;
   }
 
   if (message.action === "restore-session") {
@@ -115,19 +195,13 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "get-duplicate-count") {
-    getDuplicateCount().then((count) => sendResponse({ count }));
+    getDuplicateSummary().then(sendResponse);
     return true;
   }
 
   if (message.action === "close-duplicates") {
-    const { closeDuplicateTabs } =
-      typeof module !== "undefined"
-        ? require("./tab-commands.js")
-        : { closeDuplicateTabs: globalThis.closeDuplicateTabs };
-    if (typeof closeDuplicateTabs === "function") {
-      closeDuplicateTabs();
-    }
-    return false;
+    closeDuplicateTabs().then(sendResponse);
+    return true;
   }
 
   if (message.action === "execute-command") {
@@ -136,8 +210,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "close-domain-tabs") {
-    closeDomainTabs(message.domain);
-    return false;
+    closeDomainTabs(message.domain).then(sendResponse);
+    return true;
   }
 
   return false;

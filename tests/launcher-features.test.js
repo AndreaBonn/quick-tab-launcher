@@ -113,7 +113,16 @@ async function loadLauncher(browserMock) {
   globalThis.renderError = renderError;
   globalThis.updateSelection = updateSelection;
   globalThis.reindexItems = reindexItems;
-  Object.assign(globalThis, require("../src/icons.js"), require("../src/hints.js"));
+  Object.assign(
+    globalThis,
+    require("../src/icons.js"),
+    require("../src/hints.js"),
+    require("../src/panel-extras.js"),
+    require("../src/onboarding.js"),
+    require("../src/render-utils.js"),
+    require("../src/commands.js"),
+    { tCount: require("../src/i18n.js").tCount },
+  );
 
   let capturedShadowRoot = null;
   const originalAttachShadow = HTMLElement.prototype.attachShadow;
@@ -189,7 +198,7 @@ describe("launcher.js - command mode", () => {
   it("sends execute-command on Enter in command mode", async () => {
     messageListener({ action: "toggle" });
     const input = shadowRoot.querySelector(".qal-input");
-    input.value = ">";
+    input.value = ">silenzia";
     input.dispatchEvent(new Event("input"));
 
     await new Promise((r) => setTimeout(r, 50));
@@ -225,10 +234,28 @@ describe("launcher.js - command mode", () => {
 
     await new Promise((r) => setTimeout(r, 50));
 
-    const section = shadowRoot.querySelector(
-      '.qal-section[data-section="commands"]',
+    const tabsSection = shadowRoot.querySelector(
+      '.qal-section[data-section="command-tabs"]',
     );
-    expect(section).toBeTruthy();
+    const currentSection = shadowRoot.querySelector(
+      '.qal-section[data-section="command-current"]',
+    );
+    expect(tabsSection).toBeTruthy();
+    expect(currentSection).toBeTruthy();
+  });
+
+  it("uses one Actions section when the list is filtered", async () => {
+    messageListener({ action: "toggle" });
+    const input = shadowRoot.querySelector(".qal-input");
+    input.value = ">chiudi";
+    input.dispatchEvent(new Event("input"));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(
+      shadowRoot.querySelector('.qal-section[data-section="commands"]'),
+    ).toBeTruthy();
+    expect(
+      shadowRoot.querySelector('.qal-section[data-section="command-tabs"]'),
+    ).toBeNull();
   });
 });
 

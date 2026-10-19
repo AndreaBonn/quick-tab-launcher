@@ -54,6 +54,8 @@
         "src/icons.js",
         "src/hints.js",
         "src/render-utils.js",
+        "src/panel-extras.js",
+        "src/onboarding.js",
         "content/launcher.js"
       ],
       "run_at": "document_end"

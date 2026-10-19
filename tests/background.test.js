@@ -15,13 +15,24 @@ function createBrowserMock() {
   return {
     commands: {
       onCommand: { addListener: vi.fn() },
+      getAll: vi
+        .fn()
+        .mockResolvedValue([
+          { name: "toggle-launcher", shortcut: "Ctrl+Shift+Space" },
+        ]),
     },
     browserAction: {
       onClicked: { addListener: vi.fn() },
       setPopup: vi.fn().mockResolvedValue(undefined),
+      setTitle: vi.fn().mockResolvedValue(undefined),
+      openPopup: vi.fn().mockResolvedValue(undefined),
     },
     runtime: {
       onMessage: { addListener: vi.fn() },
+      openOptionsPage: vi.fn().mockResolvedValue(undefined),
+      getManifest: vi.fn(() => ({
+        content_scripts: [{ js: ["src/i18n.js", "content/launcher.js"] }],
+      })),
     },
     storage: {
       local: {
@@ -39,6 +50,7 @@ function createBrowserMock() {
         .mockResolvedValue({ windowId: 1, url: "https://example.com" }),
       create: vi.fn().mockResolvedValue({}),
       remove: vi.fn().mockResolvedValue(undefined),
+      executeScript: vi.fn().mockResolvedValue([]),
       onActivated: { addListener: vi.fn() },
       onUpdated: { addListener: vi.fn() },
     },
@@ -766,13 +778,17 @@ describe("background.js - close-tab handler", () => {
     expect(browserMock.tabs.remove).toHaveBeenCalledWith(99);
   });
 
-  it("does not return true for close-tab action (sync)", () => {
+  it("answers once the tab is closed, so the panel can offer undo", async () => {
+    const sendResponse = vi.fn();
     const result = messageListener(
       { action: "close-tab", tabId: 99 },
       { tab: { id: 10 } },
-      vi.fn(),
+      sendResponse,
     );
-    expect(result).toBe(false);
+    expect(result).toBe(true);
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({ closed: 1 }),
+    );
   });
 });
 
@@ -1198,5 +1214,135 @@ describe("background.js - tabs.onActivated callback", () => {
     expect(browserMock.browserAction.setPopup).toHaveBeenCalledWith({
       popup: "",
     });
+  });
+});
+
+describe("background.js - shortcut on pages without the overlay (N1)", () => {
+  let browserMock;
+  let commandListener;
+  let tabActivatedListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ commandListener, tabActivatedListener } = loadBackground(browserMock));
+  });
+
+  it("opens the popup on a privileged tab instead of messaging it", async () => {
+    browserMock.tabs.get.mockResolvedValue({ id: 5, url: "about:newtab" });
+    await tabActivatedListener({ tabId: 5 });
+    await vi.waitFor(() =>
+      expect(browserMock.browserAction.setPopup).toHaveBeenCalled(),
+    );
+
+    await commandListener("toggle-launcher");
+
+    expect(browserMock.browserAction.openPopup).toHaveBeenCalled();
+    expect(browserMock.tabs.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("messages the content script on a normal tab", async () => {
+    browserMock.tabs.get.mockResolvedValue({ id: 6, url: "https://a.com" });
+    browserMock.tabs.query.mockResolvedValue([{ id: 6 }]);
+    await tabActivatedListener({ tabId: 6 });
+    await vi.waitFor(() =>
+      expect(browserMock.browserAction.setPopup).toHaveBeenCalled(),
+    );
+
+    await commandListener("toggle-launcher");
+
+    expect(browserMock.browserAction.openPopup).not.toHaveBeenCalled();
+    expect(browserMock.tabs.sendMessage).toHaveBeenCalledWith(6, {
+      action: "toggle",
+    });
+  });
+
+  it("injects the launcher into tabs opened before install, then retries", async () => {
+    browserMock.tabs.query.mockResolvedValue([{ id: 7 }]);
+    browserMock.tabs.sendMessage
+      .mockRejectedValueOnce(new Error("Receiving end does not exist"))
+      .mockResolvedValueOnce(undefined);
+
+    await commandListener("toggle-launcher");
+
+    expect(browserMock.tabs.executeScript).toHaveBeenCalledWith(7, {
+      file: "content/launcher.js",
+    });
+    expect(browserMock.tabs.sendMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not inject when the content script answers", async () => {
+    browserMock.tabs.query.mockResolvedValue([{ id: 7 }]);
+    await commandListener("toggle-launcher");
+    expect(browserMock.tabs.executeScript).not.toHaveBeenCalled();
+  });
+
+  it("treats the add-ons site as a page without the overlay", () => {
+    expect(globalThis.isPrivilegedUrl("https://addons.mozilla.org/it/")).toBe(
+      true,
+    );
+    expect(globalThis.isPrivilegedUrl("https://mozilla.org/")).toBe(false);
+  });
+});
+
+describe("background.js - toolbar title shows the shortcut (N2)", () => {
+  it("sets the title with the current shortcut", async () => {
+    const browserMock = createBrowserMock();
+    loadBackground(browserMock);
+    await vi.waitFor(() =>
+      expect(browserMock.browserAction.setTitle).toHaveBeenCalledWith({
+        title: "Quick Tab Launcher (Ctrl+Shift+Space)",
+      }),
+    );
+  });
+
+  it("falls back to the plain name when no shortcut is set", async () => {
+    const browserMock = createBrowserMock();
+    browserMock.commands.getAll.mockResolvedValue([
+      { name: "toggle-launcher", shortcut: "" },
+    ]);
+    loadBackground(browserMock);
+    await vi.waitFor(() =>
+      expect(browserMock.browserAction.setTitle).toHaveBeenCalledWith({
+        title: "Quick Tab Launcher",
+      }),
+    );
+  });
+});
+
+describe("background.js - panel messages", () => {
+  let browserMock;
+  let messageListener;
+
+  beforeEach(() => {
+    browserMock = createBrowserMock();
+    ({ messageListener } = loadBackground(browserMock));
+  });
+
+  it("open-options opens the settings page (S6)", () => {
+    messageListener({ action: "open-options" }, { tab: { id: 1 } }, vi.fn());
+    expect(browserMock.runtime.openOptionsPage).toHaveBeenCalled();
+  });
+
+  it("get-recent-tabs leaves out the tab the panel is open on (A2)", async () => {
+    globalThis.getRecentTabs = vi.fn().mockResolvedValue({});
+    const sendResponse = vi.fn();
+    messageListener(
+      { action: "get-recent-tabs" },
+      { tab: { id: 42 } },
+      sendResponse,
+    );
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(globalThis.getRecentTabs).toHaveBeenCalledWith(42);
+    delete globalThis.getRecentTabs;
+  });
+
+  it("get-recent-tabs from the popup uses the active tab", async () => {
+    globalThis.getRecentTabs = vi.fn().mockResolvedValue({});
+    browserMock.tabs.query.mockResolvedValue([{ id: 8 }]);
+    const sendResponse = vi.fn();
+    messageListener({ action: "get-recent-tabs" }, {}, sendResponse);
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(globalThis.getRecentTabs).toHaveBeenCalledWith(8);
+    delete globalThis.getRecentTabs;
   });
 });
