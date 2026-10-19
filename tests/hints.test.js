@@ -53,7 +53,14 @@ describe("getFooterHints", () => {
   it("lists every shortcut when expanded", () => {
     const ids = getFooterHints("recent", true).map((h) => h.id);
     expect(ids).toEqual(
-      expect.arrayContaining(["new-tab", "group", "fulltext", "esc"]),
+      expect.arrayContaining([
+        "new-tab",
+        "group",
+        "fulltext",
+        "close-tab",
+        "undo",
+        "esc",
+      ]),
     );
     expect(getFooterHints("recent", false).map((h) => h.id)).not.toContain(
       "fulltext",
