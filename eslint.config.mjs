@@ -34,8 +34,8 @@ export default [
     },
   },
   {
-    // The locale dictionary remains cohesive; options will be decomposed separately.
-    files: ["src/i18n.js", "options/options.js"],
+    // The locale dictionary remains cohesive; its size comes from translation data.
+    files: ["src/i18n.js"],
     rules: { "max-lines": "off" },
   },
   {

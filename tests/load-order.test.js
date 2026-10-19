@@ -83,6 +83,29 @@ describe.each(POINTS)("%s loading contract", (point) => {
 });
 
 describe("loading contract diagnostics", () => {
+  it("captures and saves a shortcut through the scripts registered by the options page", async () => {
+    const dom = loadWindow("options");
+    const { window } = dom;
+    window.browser.commands.update = vi.fn(async () => {});
+    try {
+      const loaded = new Promise((resolve) => window.addEventListener("load", resolve, { once: true }));
+      for (const { file, source } of sourcesFor("options")) {
+        vm.runInContext(source, dom.getInternalVMContext(), { filename: file });
+      }
+      await loaded;
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      expect([...window.document.querySelectorAll("#qal-shortcut-keys kbd")].map((key) => key.textContent)).toEqual(["Ctrl", "Shift", "Spazio"]);
+      window.document.getElementById("qal-shortcut-change").click();
+      window.document.dispatchEvent(new window.KeyboardEvent("keydown", { code: "KeyK", key: "K", ctrlKey: true, shiftKey: true }));
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      expect(window.browser.commands.update).toHaveBeenCalledWith({ name: "toggle-launcher", shortcut: "Ctrl+Shift+K" });
+      expect([...window.document.querySelectorAll("#qal-shortcut-keys kbd")].map((key) => key.textContent)).toEqual(["Ctrl", "Shift", "K"]);
+      expect(window.browser.runtime.sendMessage).toHaveBeenCalledWith({ action: "refresh-action-title" });
+    } finally {
+      window.close();
+    }
+  });
+
   it("loads the shared panel view from the content manifest before the launcher", () => {
     const dom = loadWindow("content");
     try {

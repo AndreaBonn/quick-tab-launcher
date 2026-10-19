@@ -56,6 +56,8 @@ async function openOptions(options) {
     OPTIONS_HTML.indexOf("<body>") + "<body>".length,
     OPTIONS_HTML.indexOf("<script"),
   );
+  delete require.cache[require.resolve("../options/options-shortcut.js")];
+  Object.assign(globalThis, require("../options/options-shortcut.js"));
   delete require.cache[require.resolve("../options/options.js")];
   require("../options/options.js");
   document.dispatchEvent(new Event("DOMContentLoaded"));
@@ -261,6 +263,8 @@ describe("web search switch (R9)", () => {
     };
     // Reload so the page reads the permission state through the new mock.
     globalThis.browser = browserMock;
+    delete require.cache[require.resolve("../options/options-shortcut.js")];
+    Object.assign(globalThis, require("../options/options-shortcut.js"));
     delete require.cache[require.resolve("../options/options.js")];
     let onReady;
     const spy = vi
@@ -323,6 +327,8 @@ describe("web search switch robustness (R9 review)", () => {
     const browserMock = await openOptions();
     browserMock.permissions = permissions;
     globalThis.browser = browserMock;
+    delete require.cache[require.resolve("../options/options-shortcut.js")];
+    Object.assign(globalThis, require("../options/options-shortcut.js"));
     delete require.cache[require.resolve("../options/options.js")];
     let onReady;
     const spy = vi

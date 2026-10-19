@@ -84,6 +84,8 @@ function loadOptionsPage(browserMock) {
     </form>
   `;
 
+  delete require.cache[require.resolve("../options/options-shortcut.js")];
+  Object.assign(globalThis, require("../options/options-shortcut.js"));
   delete require.cache[require.resolve("../options/options.js")];
   require("../options/options.js");
 
@@ -232,6 +234,8 @@ describe("options page - checkbox fields", () => {
     globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
     globalThis.mergeWithDefaults = mergeWithDefaults;
 
+    delete require.cache[require.resolve("../options/options-shortcut.js")];
+    Object.assign(globalThis, require("../options/options-shortcut.js"));
     delete require.cache[require.resolve("../options/options.js")];
     require("../options/options.js");
     document.dispatchEvent(new Event("DOMContentLoaded"));
@@ -267,6 +271,8 @@ describe("options page - checkbox fields", () => {
     globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
     globalThis.mergeWithDefaults = mergeWithDefaults;
 
+    delete require.cache[require.resolve("../options/options-shortcut.js")];
+    Object.assign(globalThis, require("../options/options-shortcut.js"));
     delete require.cache[require.resolve("../options/options.js")];
     require("../options/options.js");
     document.dispatchEvent(new Event("DOMContentLoaded"));
@@ -302,6 +308,8 @@ describe("options page - checkbox fields", () => {
     globalThis.CONFIG_STORAGE_KEY = CONFIG_STORAGE_KEY;
     globalThis.mergeWithDefaults = mergeWithDefaults;
 
+    delete require.cache[require.resolve("../options/options-shortcut.js")];
+    Object.assign(globalThis, require("../options/options-shortcut.js"));
     delete require.cache[require.resolve("../options/options.js")];
     require("../options/options.js");
     document.dispatchEvent(new Event("DOMContentLoaded"));
