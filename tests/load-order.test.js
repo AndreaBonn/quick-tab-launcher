@@ -1,0 +1,108 @@
+import { describe, it, expect, vi } from "vitest";
+import fs from "node:fs";
+import vm from "node:vm";
+import { JSDOM, VirtualConsole } from "jsdom";
+import { scriptsFor, pageFor } from "./helpers/load-scripts.js";
+import { checkBindings } from "./helpers/script-contract.js";
+import { createBrowserMock } from "./helpers/load-launcher.js";
+
+const POINTS = ["background", "content", "popup", "options", "welcome"];
+const event = () => ({ addListener: vi.fn() });
+
+function browserForLoad() {
+  const browser = createBrowserMock();
+  browser.commands = { getAll: vi.fn(async () => [{ name: "toggle-launcher", shortcut: "Ctrl+Shift+Space" }]), onCommand: event() };
+  browser.runtime.onInstalled = event();
+  browser.tabs = { query: vi.fn(async () => []), onActivated: event(), onUpdated: event() };
+  browser.windows = { onFocusChanged: event() };
+  browser.browserAction = { setTitle: vi.fn(async () => {}), onClicked: event() };
+  browser.permissions = { contains: vi.fn(async () => false), onAdded: event(), onRemoved: event() };
+  return browser;
+}
+
+function sourcesFor(point) {
+  return scriptsFor(point).map((file) => ({ file, source: fs.readFileSync(file, "utf8") }));
+}
+
+function loadWindow(point, errors = []) {
+  const virtualConsole = new VirtualConsole();
+  for (const type of ["jsdomError", "error", "warn"]) {
+    virtualConsole.on(type, (...args) => errors.push(args));
+  }
+  const dom = new JSDOM(pageFor(point), {
+    runScripts: "outside-only",
+    url: "https://extension.test/",
+    virtualConsole,
+  });
+  dom.window.browser = browserForLoad();
+  return dom;
+}
+
+describe.each(POINTS)("%s loading contract", (point) => {
+  it("resolves every registered script to an existing file", () => {
+    const scripts = scriptsFor(point);
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const file of scripts) expect(fs.statSync(file).isFile(), file).toBe(true);
+  });
+
+  it("provides globals before their consumers without duplicate bindings", () => {
+    const dom = loadWindow(point);
+    try {
+      const owners = checkBindings(dom.window, sourcesFor(point));
+      expect(owners.size).toBeGreaterThan(0);
+    } finally {
+      dom.window.close();
+    }
+  });
+
+  it("initializes through classic scripts in a shared browser scope", async () => {
+    const errors = [];
+    const dom = loadWindow(point, errors);
+    const { window } = dom;
+    try {
+      const loaded = new Promise((resolve) => window.addEventListener("load", resolve, { once: true }));
+      for (const { file, source } of sourcesFor(point)) {
+        vm.runInContext(source, dom.getInternalVMContext(), { filename: file });
+      }
+      await loaded;
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      expect(window.eval('t("keys.space")')).toBe("Spazio");
+      if (point === "options") {
+        expect(window.document.querySelector("#qal-max-tab-results").value).toBe("5");
+      } else if (point === "popup") {
+        expect(window.document.querySelector(".qal-input").placeholder).toBe(window.eval('t("launcher.placeholder")'));
+        expect(window.browser.runtime.sendMessage).toHaveBeenCalledWith({ action: "get-recent-tabs" });
+      } else {
+        expect(window.browser.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
+      }
+      expect(errors).toEqual([]);
+    } finally {
+      window.close();
+    }
+  });
+});
+
+describe("loading contract diagnostics", () => {
+  it("rejects a missing provider and accepts the same consumer after its provider", () => {
+    const dom = new JSDOM();
+    const provider = { file: "provider.js", source: "const sharedValue = 42;" };
+    const consumer = { file: "consumer.js", source: "/* global sharedValue */\nfunction readValue() { return sharedValue; }" };
+    try {
+      expect(() => checkBindings(dom.window, [consumer])).toThrow("consumer.js: sharedValue needs a script loaded earlier");
+      expect(checkBindings(dom.window, [provider, consumer]).get("sharedValue")).toBe("provider.js");
+    } finally {
+      dom.window.close();
+    }
+  });
+
+  it.each(["const sharedValue = 42;", "function sharedValue() {}"])("rejects duplicate top-level bindings: %s", (source) => {
+    const dom = new JSDOM();
+    const first = { file: "first.js", source };
+    try {
+      expect(() => checkBindings(dom.window, [first, { file: "second.js", source }])).toThrow("second.js: duplicate sharedValue from first.js");
+      expect(checkBindings(dom.window, [first]).get("sharedValue")).toBe("first.js");
+    } finally {
+      dom.window.close();
+    }
+  });
+});

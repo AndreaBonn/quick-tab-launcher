@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { scriptsFor } from "./helpers/load-scripts.js";
 import {
   createBrowserMock,
   settle,
@@ -12,17 +13,8 @@ const POPUP_HTML = fs.readFileSync(
   path.join(__dirname, "../popup/popup.html"),
   "utf8",
 );
-const MODULES = [
-  "../src/config-storage.js",
-  "../src/search-utils.js",
-  "../src/fuzzy.js",
-  "../src/i18n.js",
-  "../src/commands.js",
-  "../src/icons.js",
-  "../src/hints.js",
-  "../src/render-utils.js",
-  "../src/panel-extras.js",
-];
+const SCRIPTS = scriptsFor("popup");
+const POPUP_ENTRY = SCRIPTS.at(-1);
 
 const SEARCH_TABS = () => ({
   tabs: [
@@ -44,13 +36,13 @@ async function openPopup(replies = {}) {
   const browserMock = createBrowserMock(replies);
   browserMock.runtime.openOptionsPage = vi.fn();
   globalThis.browser = browserMock;
-  for (const modulePath of MODULES) {
+  for (const modulePath of SCRIPTS.slice(0, -1)) {
     Object.assign(globalThis, require(modulePath));
   }
   globalThis.setLocaleFromStorage("it");
   window.close = vi.fn();
-  delete require.cache[require.resolve("../popup/popup.js")];
-  require("../popup/popup.js");
+  delete require.cache[require.resolve(POPUP_ENTRY)];
+  require(POPUP_ENTRY);
   document.dispatchEvent(new Event("DOMContentLoaded"));
   await settle();
   return { browserMock, input: document.querySelector(".qal-input") };

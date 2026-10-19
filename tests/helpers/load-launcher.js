@@ -1,17 +1,5 @@
 import { vi } from "vitest";
-
-const MODULES = [
-  "../../src/config-storage.js",
-  "../../src/search-utils.js",
-  "../../src/fuzzy.js",
-  "../../src/i18n.js",
-  "../../src/commands.js",
-  "../../src/icons.js",
-  "../../src/hints.js",
-  "../../src/render-utils.js",
-  "../../src/panel-extras.js",
-  "../../src/onboarding.js",
-];
+import { scriptsFor } from "./load-scripts.js";
 
 /**
  * Browser mock with an in-memory storage and per-action message replies.
@@ -56,7 +44,9 @@ export function createBrowserMock(replies = {}) {
  */
 export async function loadLauncher(browserMock) {
   globalThis.browser = browserMock;
-  for (const path of MODULES) {
+  const scripts = scriptsFor("content");
+  const entry = scripts.at(-1);
+  for (const path of scripts.slice(0, -1)) {
     Object.assign(globalThis, require(path));
   }
   require("../../src/i18n.js").setLocaleFromStorage("it");
@@ -67,8 +57,8 @@ export async function loadLauncher(browserMock) {
     shadowRoot = originalAttachShadow.call(this, { ...options, mode: "open" });
     return shadowRoot;
   };
-  delete require.cache[require.resolve("../../content/launcher.js")];
-  require("../../content/launcher.js");
+  delete require.cache[require.resolve(entry)];
+  require(entry);
   await new Promise((r) => setTimeout(r, 0));
   HTMLElement.prototype.attachShadow = originalAttachShadow;
 
