@@ -155,6 +155,34 @@ function createResultText(item, query) {
   return container;
 }
 
+function appendResultBadge(el, item, sectionKey) {
+  if (item.isContentMatch) {
+    const contentBadge = createElement("span", "qal-content-badge");
+    contentBadge.textContent = t("badges.contentMatch");
+    contentBadge.title = t("badges.contentMatch.tooltip");
+    el.appendChild(contentBadge);
+  } else if (sectionKey === "tabs" && item.isCurrentWindow === false) {
+    const badge = createElement("span", "qal-window-badge");
+    badge.textContent = t("badges.otherWindow");
+    el.appendChild(badge);
+  }
+}
+
+function appendResultActions(el, sectionKey) {
+  if (sectionKey === "tabs" || sectionKey === "recent-active") {
+    const actions = createElement("div", "qal-result-actions");
+    // Not a <button>: controls cannot sit inside an option. Mouse users click
+    // it, keyboard and screen reader users close the selected row with Alt+W.
+    const closeBtn = createElement("span", "qal-close-tab");
+    appendIcon(closeBtn, "close");
+    if (!closeBtn.firstChild) closeBtn.textContent = "\u2715";
+    closeBtn.title = t("badges.closeTab");
+    closeBtn.setAttribute("aria-hidden", "true");
+    actions.appendChild(closeBtn);
+    el.appendChild(actions);
+  }
+}
+
 function createResultItem(item, sectionKey, query, index) {
   const el = createElement("div", "qal-result-item");
   el.setAttribute("role", "option");
@@ -169,29 +197,9 @@ function createResultItem(item, sectionKey, query, index) {
   const textContainer = createResultText(item, query);
 
   el.append(favicon, textContainer);
-  if (item.isContentMatch) {
-    const contentBadge = createElement("span", "qal-content-badge");
-    contentBadge.textContent = t("badges.contentMatch");
-    contentBadge.title = t("badges.contentMatch.tooltip");
-    el.appendChild(contentBadge);
-  } else if (sectionKey === "tabs" && item.isCurrentWindow === false) {
-    const badge = createElement("span", "qal-window-badge");
-    badge.textContent = t("badges.otherWindow");
-    el.appendChild(badge);
-  }
+  appendResultBadge(el, item, sectionKey);
   if (ENTER_HINT_KEYS[sectionKey]) el.appendChild(createEnterHint(sectionKey));
-  if (sectionKey === "tabs" || sectionKey === "recent-active") {
-    const actions = createElement("div", "qal-result-actions");
-    // Not a <button>: controls cannot sit inside an option. Mouse users click
-    // it, keyboard and screen reader users close the selected row with Alt+W.
-    const closeBtn = createElement("span", "qal-close-tab");
-    appendIcon(closeBtn, "close");
-    if (!closeBtn.firstChild) closeBtn.textContent = "\u2715";
-    closeBtn.title = t("badges.closeTab");
-    closeBtn.setAttribute("aria-hidden", "true");
-    actions.appendChild(closeBtn);
-    el.appendChild(actions);
-  }
+  appendResultActions(el, sectionKey);
   return el;
 }
 

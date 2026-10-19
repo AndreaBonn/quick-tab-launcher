@@ -35,7 +35,7 @@ export default [
   },
   {
     // Temporary exceptions until the planned decompositions remove these violations.
-    files: ["background/background.js", "src/render-utils.js"],
+    files: ["background/background.js"],
     rules: { "max-lines": "off", "max-lines-per-function": "off" },
   },
   {
