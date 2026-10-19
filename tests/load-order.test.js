@@ -169,3 +169,26 @@ describe("launcher DOM loading", () => {
     }
   });
 });
+
+describe("duplicates banner loading", () => {
+  it("loads the banner controller before the launcher and renders through its dependencies", async () => {
+    const dom = loadWindow("content");
+    try {
+      for (const { file, source } of sourcesFor("content").slice(0, -1)) {
+        vm.runInContext(source, dom.getInternalVMContext(), { filename: file });
+      }
+      dom.window.browser.runtime.sendMessage.mockResolvedValue({ count: 2 });
+      const slot = dom.window.document.createElement("div");
+      const onClosed = vi.fn();
+      const banner = dom.window.eval("createDuplicatesBanner")({
+        slot, browser: dom.window.browser, isActive: () => true, onClosed,
+      });
+      await banner.checkDuplicates();
+      expect(slot.querySelector(".qal-duplicate-banner").textContent).toContain(dom.window.eval('tCount("duplicates.banner", 2)'));
+      banner.dismiss(slot.firstElementChild);
+      expect(dom.window.browser.store.qal_duplicates_dismissed).toBe("2");
+    } finally {
+      dom.window.close();
+    }
+  });
+});

@@ -62,6 +62,7 @@
         "src/panel-actions.js",
         "src/panel-controller.js",
         "content/launcher-dom.js",
+        "content/duplicates-banner.js",
         "content/launcher.js"
       ],
       "run_at": "document_end"

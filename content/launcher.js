@@ -1,11 +1,10 @@
-/* global createPanelState, createPanelView, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createOverlayDOM, translateOverlayDOM, renderDuplicateBanner, renderEmpty, filterCommands, tCount, renderGuide, renderQuickActions, buildToast, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide, createPanelController */
+/* global createPanelState, createPanelView, browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createOverlayDOM, translateOverlayDOM, createDuplicatesBanner, renderEmpty, filterCommands, tCount, renderGuide, renderQuickActions, buildToast, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide, createPanelController */
 
 (function () {
   "use strict";
 
   const HOST_ELEMENT_ID = "qal-shadow-host";
   const PAGE_TOAST_MS = 6000;
-  const DUPLICATES_DISMISSED_KEY = "qal_duplicates_dismissed";
   const QUICK_COMMAND_IDS = [
     "close-duplicates",
     "mute-tab",
@@ -20,13 +19,13 @@
     pageUndoCount: 0,
     pageToastTimeout: null,
     guideState: null,
-    duplicateSignature: "",
     shadowRoot: null,
     elements: {},
   };
 
   let panelView;
   let panelController;
+  let duplicatesBanner;
 
   function init() {
     if (document.getElementById(HOST_ELEMENT_ID)) return;
@@ -41,6 +40,14 @@
     panelView = createPanelView({ state, elements: state.elements });
     setupPanelController();
     applyOverlayTranslations();
+    duplicatesBanner = createDuplicatesBanner({
+      slot: state.elements.duplicatesSlot, browser,
+      isActive: () => state.isVisible,
+      onClosed: (closed) => {
+        panelView.showPanelToast(tCount("done.close-duplicates", closed), closed);
+        panelController.refreshCurrentView();
+      },
+    });
     setupListeners();
   }
 
@@ -92,7 +99,7 @@
     );
     state.elements.groupToggle.addEventListener("click", panelController.toggleGroupedView);
     state.elements.panel.addEventListener("click", handlePanelAction);
-    state.elements.duplicatesSlot.addEventListener("click", handleBannerClick);
+    state.elements.duplicatesSlot.addEventListener("click", duplicatesBanner.handleClick);
     state.elements.pageToastSlot.addEventListener("click", (e) => {
       if (e.target.closest('[data-qal-action="undo"]')) undoFromPage();
     });
@@ -129,7 +136,7 @@
     renderQuickActions(state.elements.quickActions, quickCommands());
 
     panelController.fetchRecentTabs();
-    checkDuplicates();
+    duplicatesBanner.checkDuplicates();
     panelController.fetchActiveTabState();
     panelController.fetchWebSearchState();
     showGuideIfNeeded();
@@ -151,49 +158,6 @@
     state.flatResults = [];
     state.pendingConfirmId = null;
     panelView.hidePanelToast();
-  }
-
-  function duplicateSignature(summary) {
-    const pages = (summary.groups || []).map((g) => `${g.url}#${g.extra}`);
-    return [summary.count, ...pages].join("|");
-  }
-
-  async function checkDuplicates() {
-    try {
-      const summary = await browser.runtime.sendMessage({
-        action: "get-duplicate-count",
-      });
-      if (!state.isVisible || !summary || summary.count <= 0) return;
-      state.duplicateSignature = duplicateSignature(summary);
-      const stored = await browser.storage.local.get(DUPLICATES_DISMISSED_KEY);
-      // "Not now" hides the banner until the set of duplicates changes.
-      if (stored[DUPLICATES_DISMISSED_KEY] === state.duplicateSignature) return;
-      if (!state.isVisible) return;
-      renderDuplicateBanner(state.elements.duplicatesSlot, summary);
-    } catch (err) {
-      console.warn("Quick TAB Launcher: duplicate check failed", err);
-    }
-  }
-
-  function dismissDuplicateBanner(banner) {
-    banner.remove();
-    browser.storage.local
-      .set({ [DUPLICATES_DISMISSED_KEY]: state.duplicateSignature })
-      .catch((err) => console.warn("Quick TAB Launcher: save failed", err));
-  }
-
-  async function closeDuplicatesFromBanner(banner) {
-    banner.remove();
-    try {
-      const result = await browser.runtime.sendMessage({
-        action: "close-duplicates",
-      });
-      const closed = result?.closed ?? 0;
-      panelView.showPanelToast(tCount("done.close-duplicates", closed), closed);
-      panelController.refreshCurrentView();
-    } catch (err) {
-      console.warn("Quick TAB Launcher: closing duplicates failed", err);
-    }
   }
 
   function quickCommands() {
@@ -291,22 +255,6 @@
       console.warn("Quick TAB Launcher: command failed", err);
     }
     showPageToast(outcomeMessage(commandId, result), result?.closed ?? 0);
-  }
-
-  function handleBannerClick(e) {
-    const dupDismiss = e.target.closest(".qal-duplicate-dismiss");
-    if (dupDismiss) {
-      e.stopPropagation();
-      dismissDuplicateBanner(dupDismiss.closest(".qal-duplicate-banner"));
-      return;
-    }
-
-    const dupAction = e.target.closest(".qal-duplicate-action");
-    if (dupAction) {
-      e.stopPropagation();
-      closeDuplicatesFromBanner(dupAction.closest(".qal-duplicate-banner"));
-      return;
-    }
   }
 
   async function loadConfig() {
