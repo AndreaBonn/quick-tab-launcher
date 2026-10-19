@@ -357,14 +357,23 @@
     }
   }
 
+  // Option+letter on macOS types a symbol (©, ç), so match the physical key.
+  function isAltShortcut(e, letter) {
+    return (
+      e.altKey &&
+      (e.code === `Key${letter.toUpperCase()}` ||
+        e.key.toLowerCase() === letter)
+    );
+  }
+
   function handleKeydown(e) {
-    if (e.altKey && (e.key === "c" || e.key === "C")) {
+    if (isAltShortcut(e, "c")) {
       e.preventDefault();
       toggleFulltextSearch();
       return;
     }
 
-    if (e.altKey && (e.key === "g" || e.key === "G")) {
+    if (isAltShortcut(e, "g")) {
       e.preventDefault();
       toggleGroupedView();
       return;

@@ -675,3 +675,42 @@ describe("launcher.js - grouped view opens the highlighted row", () => {
     delete globalThis.browser;
   });
 });
+
+describe("launcher.js - Option shortcuts on Mac", () => {
+  it("Option+G toggles By site even though the key produces ©", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const { shadowRoot } = await loadLauncher(createBrowserMock());
+    const input = shadowRoot.querySelector(".qal-input");
+    const btn = shadowRoot.querySelector(".qal-group-toggle");
+
+    const event = new KeyboardEvent("keydown", {
+      key: "©",
+      code: "KeyG",
+      altKey: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(event);
+
+    expect(btn.getAttribute("aria-pressed")).toBe("true");
+    expect(event.defaultPrevented).toBe(true);
+    document.getElementById("qal-shadow-host")?.remove();
+    delete globalThis.browser;
+  });
+
+  it("Option+C toggles text search even though the key produces ç", async () => {
+    document.documentElement.innerHTML = "<head></head><body></body>";
+    const browserMock = createBrowserMock();
+    const { shadowRoot } = await loadLauncher(browserMock);
+    const input = shadowRoot.querySelector(".qal-input");
+    const before = QAL_CONFIG.ENABLE_FULLTEXT_SEARCH;
+
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ç", code: "KeyC", altKey: true }),
+    );
+
+    expect(QAL_CONFIG.ENABLE_FULLTEXT_SEARCH).toBe(!before);
+    QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = before;
+    document.getElementById("qal-shadow-host")?.remove();
+    delete globalThis.browser;
+  });
+});
