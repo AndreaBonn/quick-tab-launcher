@@ -21,6 +21,33 @@ export default [
     },
   },
   {
+    files: ["src/**/*.js", "background/**/*.js", "content/**/*.js", "options/**/*.js", "popup/**/*.js", "welcome/**/*.js"],
+    languageOptions: {
+      globals: globals.commonjs,
+    },
+    rules: {
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 30, skipBlankLines: true, skipComments: true }],
+      "max-params": ["error", 4],
+      "max-depth": ["error", 3],
+      "no-undef": "error",
+    },
+  },
+  {
+    // Temporary exceptions until the planned decompositions remove these violations.
+    files: ["background/background.js", "content/launcher.js", "popup/popup.js", "src/render-utils.js"],
+    rules: { "max-lines": "off", "max-lines-per-function": "off" },
+  },
+  {
+    files: ["background/tab-commands.js"],
+    rules: { "max-lines-per-function": "off" },
+  },
+  {
+    // The locale dictionary remains cohesive; options will be decomposed separately.
+    files: ["src/i18n.js", "options/options.js"],
+    rules: { "max-lines": "off" },
+  },
+  {
     files: ["tests/**/*.js", "vitest.config.js", "eslint.config.js"],
     languageOptions: {
       ecmaVersion: 2022,
