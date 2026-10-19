@@ -366,6 +366,8 @@ async function requestConfirm(item) {
   } catch (err) {
     console.warn("Quick TAB Launcher popup: preview failed", err);
   }
+  const isStillSelected = state.flatResults[state.selectedIndex]?.id === item.id;
+  if (!isStillSelected) return;
   if (affected === 0) {
     showToast(t("done.nothing"));
     return;

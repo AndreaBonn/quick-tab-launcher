@@ -71,6 +71,26 @@ afterEach(() => {
 });
 
 describe("popup - same tools as the overlay (N3)", () => {
+  it("does not confirm a command after selection changes during preview", async () => {
+    let resolvePreview;
+    const preview = new Promise((resolve) => { resolvePreview = resolve; });
+    const { browserMock, input } = await openRegressionPopup({
+      "preview-command": () => preview,
+    });
+    await type(input, ">");
+    press(input, "Enter");
+    expect(sent(browserMock)).toContainEqual({
+      action: "preview-command", commandId: "close-other-tabs",
+    });
+    press(input, "ArrowDown");
+    const selected = document.querySelector('.qal-result-item[aria-selected="true"]');
+    expect(selected.textContent).toContain("Chiudi schede duplicate");
+    resolvePreview({ affected: 2 });
+    await settle();
+    expect(document.querySelector(".qal-confirm")).toBeNull();
+    expect(selected.getAttribute("aria-selected")).toBe("true");
+  });
+
   it("keeps the newer search results when the older reply arrives last", async () => {
     let resolveOlder;
     let resolveNewer;
