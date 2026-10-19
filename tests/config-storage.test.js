@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const {
+  loadStoredConfig,
+  applyConfigChange,
   QAL_CONFIG_DEFAULTS,
   CONFIG_STORAGE_KEY,
   mergeWithDefaults,
@@ -146,5 +148,37 @@ describe("QAL_CONFIG_DEFAULTS", () => {
       expect(typeof QAL_CONFIG_DEFAULTS[key]).toBe("number");
       expect(QAL_CONFIG_DEFAULTS[key]).toBeGreaterThan(0);
     }
+  });
+});
+
+
+describe("shared config application", () => {
+  it("loads valid overrides and keeps defaults for invalid and unknown keys", async () => {
+    globalThis.browser = { storage: { local: { get: vi.fn().mockResolvedValue({
+      [CONFIG_STORAGE_KEY]: { MAX_TAB_RESULTS: 12, DEBOUNCE_MS: "invalid", UNKNOWN: 1 },
+    }) } } };
+    const target = {};
+    await loadStoredConfig(target);
+    expect(target).toEqual({ ...QAL_CONFIG_DEFAULTS, MAX_TAB_RESULTS: 12 });
+    expect(browser.storage.local.get).toHaveBeenCalledWith(CONFIG_STORAGE_KEY);
+  });
+
+  it("loads defaults when storage is empty and propagates storage failures", async () => {
+    globalThis.browser = { storage: { local: { get: vi.fn().mockResolvedValue({}) } } };
+    const target = {};
+    await loadStoredConfig(target);
+    expect(target).toEqual(QAL_CONFIG_DEFAULTS);
+    browser.storage.local.get.mockRejectedValue(new Error("storage failed"));
+    await expect(loadStoredConfig(target)).rejects.toThrow("storage failed");
+  });
+
+  it("applies changes, resets removed values, and preserves unrelated changes", () => {
+    const target = { ...QAL_CONFIG_DEFAULTS };
+    applyConfigChange(target, { unrelated: { newValue: 1 } });
+    expect(target).toEqual(QAL_CONFIG_DEFAULTS);
+    applyConfigChange(target, { [CONFIG_STORAGE_KEY]: { newValue: { MAX_TAB_RESULTS: 9, DEBOUNCE_MS: "bad" } } });
+    expect(target).toEqual({ ...QAL_CONFIG_DEFAULTS, MAX_TAB_RESULTS: 9 });
+    applyConfigChange(target, { [CONFIG_STORAGE_KEY]: {} });
+    expect(target).toEqual(QAL_CONFIG_DEFAULTS);
   });
 });

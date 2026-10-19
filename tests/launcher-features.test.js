@@ -116,6 +116,7 @@ async function loadLauncher(browserMock) {
   globalThis.reindexItems = reindexItems;
   Object.assign(
     globalThis,
+    require("../src/config-storage.js"),
     require("../src/icons.js"),
     require("../src/hints.js"),
     require("../src/panel-extras.js"),

@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, renderRecentTabs, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange, filterCommands, renderCommandResults, createIcon, renderFooterHints, isMacPlatform, isAltShortcut, t, tCount, renderSearchView, matchCommandsForSearch, buildToast, buildConfirmStrip, loadUserConfig, saveUserConfig */
+/* global browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, buildFlatResults, renderRecentTabs, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, loadLocale, applyTranslations, onLocaleChange, filterCommands, renderCommandResults, createIcon, renderFooterHints, isMacPlatform, isAltShortcut, t, tCount, renderSearchView, matchCommandsForSearch, buildToast, buildConfirmStrip, loadUserConfig, saveUserConfig */
 
 const IS_MAC = isMacPlatform(navigator.platform);
 const TOAST_MS = 8000;
@@ -26,10 +26,7 @@ const state = {
 
 async function loadConfig() {
   try {
-    const result = await browser.storage.local.get(CONFIG_STORAGE_KEY);
-    const userConfig = result[CONFIG_STORAGE_KEY] ?? {};
-    const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
-    applyConfigToGlobal(QAL_CONFIG, merged);
+    await loadStoredConfig(QAL_CONFIG);
   } catch (err) {
     console.warn("Quick TAB Launcher popup: config load failed", err);
   }
@@ -114,9 +111,7 @@ function init() {
 
   browser.storage.onChanged.addListener((changes, area) => {
     if (area !== "local" || !changes[CONFIG_STORAGE_KEY]) return;
-    const userConfig = changes[CONFIG_STORAGE_KEY].newValue ?? {};
-    const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
-    applyConfigToGlobal(QAL_CONFIG, merged);
+    applyConfigChange(QAL_CONFIG, changes);
     updateToggleStates();
   });
 }

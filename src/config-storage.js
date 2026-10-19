@@ -65,8 +65,21 @@ function applyConfigToGlobal(target, patch) {
   Object.assign(target, patch);
 }
 
+async function loadStoredConfig(target) {
+  const userConfig = await loadUserConfig();
+  applyConfigToGlobal(target, mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig));
+}
+
+function applyConfigChange(target, changes) {
+  if (!changes[CONFIG_STORAGE_KEY]) return;
+  const userConfig = changes[CONFIG_STORAGE_KEY].newValue ?? {};
+  applyConfigToGlobal(target, mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig));
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    loadStoredConfig,
+    applyConfigChange,
     CONFIG_STORAGE_KEY,
     QAL_CONFIG_DEFAULTS,
     mergeWithDefaults,

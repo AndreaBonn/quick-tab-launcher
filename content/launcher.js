@@ -1,4 +1,4 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform, isAltShortcut, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, renderSearchView, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
+/* global browser, QAL_CONFIG, loadStoredConfig, applyConfigChange, CONFIG_STORAGE_KEY, buildFlatResults, t, loadLocale, onLocaleChange, I18N_STORAGE_KEY, I18N_SUPPORTED_LOCALES, setLocaleFromStorage, detectLocale, createElement, renderCommandResults, renderRecentTabs, renderDuplicateBanner, renderEmpty, renderLoading, renderError, updateSelection, reindexItems, filterCommands, loadUserConfig, saveUserConfig, createIcon, renderFooterHints, isMacPlatform, isAltShortcut, tCount, renderGuide, renderQuickActions, buildToast, buildConfirmStrip, renderSearchView, matchCommandsForSearch, loadGuideState, saveGuideState, registerGuideOpen, dismissGuide, shouldShowGuide */
 
 (function () {
   "use strict";
@@ -919,10 +919,7 @@
 
   async function loadConfig() {
     try {
-      const result = await browser.storage.local.get(CONFIG_STORAGE_KEY);
-      const userConfig = result[CONFIG_STORAGE_KEY] ?? {};
-      const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
-      applyConfigToGlobal(QAL_CONFIG, merged);
+      await loadStoredConfig(QAL_CONFIG);
     } catch (err) {
       console.warn("Quick TAB Launcher: config load failed", err);
     }
@@ -931,9 +928,7 @@
   browser.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     if (changes[CONFIG_STORAGE_KEY]) {
-      const userConfig = changes[CONFIG_STORAGE_KEY].newValue ?? {};
-      const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
-      applyConfigToGlobal(QAL_CONFIG, merged);
+      applyConfigChange(QAL_CONFIG, changes);
     }
     if (changes[I18N_STORAGE_KEY]) {
       const newLang = changes[I18N_STORAGE_KEY].newValue;
