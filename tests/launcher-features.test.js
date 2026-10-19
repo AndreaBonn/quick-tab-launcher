@@ -739,6 +739,10 @@ describe("launcher.js - Option shortcuts on Mac", () => {
     );
 
     expect(QAL_CONFIG.ENABLE_FULLTEXT_SEARCH).toBe(!before);
+    // Let the async config save finish before the browser mock is removed.
+    await vi.waitFor(() =>
+      expect(browserMock.storage.local.set).toHaveBeenCalled(),
+    );
     QAL_CONFIG.ENABLE_FULLTEXT_SEARCH = before;
     document.getElementById("qal-shadow-host")?.remove();
     delete globalThis.browser;
