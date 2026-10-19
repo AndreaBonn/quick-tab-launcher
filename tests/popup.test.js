@@ -71,6 +71,36 @@ afterEach(() => {
 });
 
 describe("popup - same tools as the overlay (N3)", () => {
+  it.each([
+    ["config", "config load failed"],
+    ["get-active-tab-state", "tab state unavailable"],
+    ["get-web-search-state", "web search state unavailable"],
+    ["get-recent-tabs", "recent tabs unavailable"],
+  ])("warns on %s failure and keeps search and navigation working", async (action, warning) => {
+    const error = new Error(`${action} unavailable`);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { browserMock, input } = await openRegressionPopup({
+        search: SEARCH_TABS,
+        [action]: () => Promise.reject(error),
+      }, (mock) => {
+        if (action === "config") {
+          mock.storage.local.get.mockImplementation(async (key) => {
+            if (key === "qal_user_config") throw error;
+            return {};
+          });
+        }
+      });
+      await type(input, "gh");
+      expect(document.querySelector(".qal-results").textContent).toContain("GH a");
+      press(input, "Enter");
+      expect(sent(browserMock)).toContainEqual({ action: "navigate", type: "tab", tabId: 1 });
+      expect(warn).toHaveBeenCalledWith(`Quick TAB Launcher popup: ${warning}`, error);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("closes a domain from grouped results, refreshes and offers undo", async () => {
     let domainClosed = false;
     const { browserMock, input } = await openRegressionPopup({

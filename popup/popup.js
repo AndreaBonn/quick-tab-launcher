@@ -30,8 +30,8 @@ async function loadConfig() {
     const userConfig = result[CONFIG_STORAGE_KEY] ?? {};
     const merged = mergeWithDefaults(QAL_CONFIG_DEFAULTS, userConfig);
     applyConfigToGlobal(QAL_CONFIG, merged);
-  } catch {
-    // Storage unavailable: use defaults
+  } catch (err) {
+    console.warn("Quick TAB Launcher popup: config load failed", err);
   }
 }
 
@@ -126,7 +126,8 @@ async function fetchActiveTabState() {
     state.activeTabState = await browser.runtime.sendMessage({
       action: "get-active-tab-state",
     });
-  } catch {
+  } catch (err) {
+    console.warn("Quick TAB Launcher popup: tab state unavailable", err);
     state.activeTabState = null;
   }
 }
@@ -137,7 +138,8 @@ async function fetchWebSearchState() {
       action: "get-web-search-state",
     });
     state.webSearchEnabled = Boolean(reply?.enabled);
-  } catch {
+  } catch (err) {
+    console.warn("Quick TAB Launcher popup: web search state unavailable", err);
     state.webSearchEnabled = false;
   }
 }
@@ -166,8 +168,8 @@ async function fetchRecentTabs(preferredIndex = 0) {
     if (state.selectedIndex >= 0) {
       updateSelection(state.elements.results, state.selectedIndex);
     }
-  } catch {
-    // Recent tabs not available
+  } catch (err) {
+    console.warn("Quick TAB Launcher popup: recent tabs unavailable", err);
   }
 }
 
