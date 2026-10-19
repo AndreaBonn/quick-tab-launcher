@@ -283,3 +283,45 @@ describe("buildFlatResults - grouped view order", () => {
     expect(flat.map((r) => r.id)).toEqual([1, 2, 3, "b"]);
   });
 });
+
+const { isPrivilegedUrl, extractDomain } = require("../src/search-utils.js");
+
+describe("isPrivilegedUrl", () => {
+  it.each([
+    ["https://example.com/path", false],
+    ["http://localhost:3000", false],
+    ["not-a-url", false],
+    ["about:config", true],
+    ["moz-extension://fake-id/page.html", true],
+    ["file:///home/user/document.html", true],
+    ["chrome://newtab", true],
+    ["resource://gre/", true],
+    ["data:text/html,hello", true],
+    ["JAVASCRIPT:alert(1)", true],
+    ["VBSCRIPT:msgbox(1)", true],
+    ["https://addons.mozilla.org/it/", true],
+    ["https://mozilla.org/", false],
+    ["", true],
+    [null, true],
+    [undefined, true],
+  ])("classifies %s as privileged: %s", (url, expected) => {
+    expect(isPrivilegedUrl(url)).toBe(expected);
+  });
+});
+
+describe("extractDomain", () => {
+  it.each([
+    ["https://example.com/path?q=1", "example.com"],
+    ["http://localhost:3000/path", "localhost"],
+    ["not-a-url", "not-a-url"],
+    ["https://", "https://"],
+    ["about:config", ""],
+    ["moz-extension://fake-id/page.html", "fake-id"],
+    ["file:///home/user/document.html", ""],
+    ["", ""],
+    [null, ""],
+    [undefined, ""],
+  ])("extracts the host or preserves the fallback for %s", (url, expected) => {
+    expect(extractDomain(url)).toBe(expected);
+  });
+});

@@ -95,6 +95,8 @@ function loadBackground(browserMock) {
   globalThis.deduplicateResults = deduplicateResults;
   globalThis.normalizeUrl = normalizeUrl;
 
+  Object.assign(globalThis, require("../src/search-utils.js"));
+
   // Clear module cache to re-execute background.js
   delete require.cache[require.resolve("../background/background.js")];
   const bg = require("../background/background.js");

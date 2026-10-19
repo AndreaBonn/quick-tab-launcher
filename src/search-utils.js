@@ -12,6 +12,33 @@ const _defaults =
 
 const QAL_CONFIG = { ..._defaults };
 
+const PRIVILEGED_URL_PATTERNS = [
+  /^about:/,
+  /^moz-extension:/,
+  /^file:/,
+  /^chrome:/,
+  /^resource:/,
+  /^data:/,
+  /^javascript:/i,
+  /^vbscript:/i,
+  // Firefox blocks content scripts on the add-ons site.
+  /^https:\/\/addons\.mozilla\.org\//,
+];
+
+function isPrivilegedUrl(url) {
+  if (!url) return true;
+  return PRIVILEGED_URL_PATTERNS.some((pattern) => pattern.test(url));
+}
+
+function extractDomain(url) {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 function escapeHtml(text) {
   if (!text) return "";
   const map = {
@@ -128,6 +155,8 @@ function groupTabsByDomain(tabs) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     QAL_CONFIG,
+    isPrivilegedUrl,
+    extractDomain,
     escapeHtml,
     escapeRegExp,
     highlightMatch,

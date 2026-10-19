@@ -1,29 +1,11 @@
-/* global browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, fuzzyScore, deduplicateResults, executeCommand, getRecentTabs, restoreSession, closeDomainTabs, closeDuplicateTabs, getDuplicateSummary, previewCommand, undoClose, getActiveTabState */
+/* global isPrivilegedUrl, extractDomain, browser, QAL_CONFIG, QAL_CONFIG_DEFAULTS, loadUserConfig, mergeWithDefaults, applyConfigToGlobal, CONFIG_STORAGE_KEY, fuzzyScore, deduplicateResults, executeCommand, getRecentTabs, restoreSession, closeDomainTabs, closeDuplicateTabs, getDuplicateSummary, previewCommand, undoClose, getActiveTabState */
 
 const PRODUCT_NAME = "Quick Tab Launcher";
 const TOGGLE_COMMAND = "toggle-launcher";
 
-const PRIVILEGED_URL_PATTERNS = [
-  /^about:/,
-  /^moz-extension:/,
-  /^file:/,
-  /^chrome:/,
-  /^resource:/,
-  /^data:/,
-  /^javascript:/i,
-  /^vbscript:/i,
-  // Firefox blocks content scripts on the add-ons site.
-  /^https:\/\/addons\.mozilla\.org\//,
-];
-
 // Read synchronously by the shortcut handler: openPopup() only works while
 // the keyboard shortcut still counts as a user action, i.e. before any await.
 let isActiveTabPrivileged = false;
-
-function isPrivilegedUrl(url) {
-  if (!url) return true;
-  return PRIVILEGED_URL_PATTERNS.some((pattern) => pattern.test(url));
-}
 
 async function updatePopupForTab(tabId) {
   try {
@@ -460,15 +442,6 @@ async function handleCloseTab(tabId) {
   } catch (err) {
     console.log("Quick TAB Launcher: chiusura tab fallita", err.message);
     return false;
-  }
-}
-
-function extractDomain(url) {
-  if (!url) return "";
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
   }
 }
 
