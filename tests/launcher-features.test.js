@@ -561,6 +561,33 @@ describe("launcher.js - duplicate banner", () => {
 
     expect(shadowRoot.querySelector(".qal-duplicate-banner")).toBeNull();
   });
+
+  it("reloads the recent list after the duplicates were closed", async () => {
+    let recentCalls = 0;
+    browserMock.runtime.sendMessage.mockImplementation((msg) => {
+      if (msg.action === "get-duplicate-count") return Promise.resolve({ count: 3 });
+      if (msg.action === "close-duplicates") return Promise.resolve({ closed: 2 });
+      if (msg.action === "get-recent-tabs") {
+        recentCalls += 1;
+        const title = recentCalls === 1 ? "Before cleanup" : "After cleanup";
+        return Promise.resolve({
+          recentActive: [{ id: 1, title, url: "https://example.com" }],
+          recentlyClosed: [],
+        });
+      }
+      return Promise.resolve({ tabs: [], bookmarks: [], history: [] });
+    });
+    messageListener({ action: "toggle" });
+    await new Promise((r) => setTimeout(r, 100));
+    const results = shadowRoot.querySelector(".qal-results");
+    expect(results.textContent).toContain("Before cleanup");
+
+    shadowRoot.querySelector(".qal-duplicate-action").click();
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(results.textContent).toContain("After cleanup");
+    expect(results.textContent).not.toContain("Before cleanup");
+  });
 });
 
 describe("launcher.js - footer hints", () => {
