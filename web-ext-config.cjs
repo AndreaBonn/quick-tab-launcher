@@ -10,6 +10,8 @@ module.exports = {
     '.playwright-mcp/',
     'docs/',
     'doc_progetto/',
+    'specs/',
+    '*.log',
     'badges/',
     'web-ext-artifacts/',
     '*.config.mjs',
