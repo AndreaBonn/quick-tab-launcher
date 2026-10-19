@@ -52,8 +52,8 @@ const {
   renderGroupedResults,
   renderCommandResults,
   renderRecentTabs,
-  renderDuplicateBanner,
 } = require("../src/render-views.js");
+const { renderDuplicateBanner } = require("../content/duplicates-banner.js");
 
 function createBrowserMock() {
   return {

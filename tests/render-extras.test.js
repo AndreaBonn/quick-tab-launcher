@@ -31,10 +31,10 @@ const {
 const {
   renderCommandResults,
   renderRecentTabs,
-  renderDuplicateBanner,
   renderGroupedResults,
   renderResults,
 } = require("../src/render-views.js");
+const { renderDuplicateBanner } = require("../content/duplicates-banner.js");
 
 describe("fuzzyHighlightOrFallback", () => {
   it("uses fuzzy highlighting when match found", () => {

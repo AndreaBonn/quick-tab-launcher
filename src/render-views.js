@@ -1,4 +1,4 @@
-/* global createElement, appendIcon, createEnterHint, createSection, createResultItem, setResultsRole, updateSelection, renderEmpty, renderNoResults, groupTabsByDomain, escapeHtml, highlightFuzzyMatch, t, tCount */
+/* global createElement, appendIcon, createEnterHint, createSection, createResultItem, setResultsRole, updateSelection, renderEmpty, renderNoResults, groupTabsByDomain, escapeHtml, highlightFuzzyMatch, t */
 const SECTION_KEYS = ["tabs", "bookmarks", "history"];
 
 function renderResults(container, results, query, selectedIndex) {
@@ -235,56 +235,6 @@ function renderRecentTabs(container, recentData) {
   }
 }
 
-function appendDuplicateGroups(text, groups, more) {
-  if (groups.length > 0) {
-    const list = createElement("ul", "qal-duplicate-list");
-    for (const group of groups) {
-      const li = createElement("li", "");
-      li.textContent = tCount("duplicates.item", group.extra, {
-        title: group.title,
-      });
-      list.appendChild(li);
-    }
-    if (more > 0) {
-      const li = createElement("li", "");
-      li.textContent = tCount("duplicates.more", more);
-      list.appendChild(li);
-    }
-    text.appendChild(list);
-  }
-}
-
-/**
- * Shows which pages are open more than once, with Close and Not now.
- *
- * @param {HTMLElement} container - Results container.
- * @param {{count: number, groups?: Array, more?: number}} summary - From
- *   the background "get-duplicate-count" message.
- */
-function renderDuplicateBanner(container, summary) {
-  const { count, groups = [], more = 0 } = summary;
-  if (count <= 0) return;
-  const existing = container.querySelector(".qal-duplicate-banner");
-  if (existing) existing.remove();
-
-  const banner = createElement("div", "qal-duplicate-banner");
-  const text = createElement("div", "qal-duplicate-text");
-  const headline = createElement("span", "qal-duplicate-headline");
-  headline.textContent = tCount("duplicates.banner", count);
-  text.appendChild(headline);
-  appendDuplicateGroups(text, groups, more);
-  const actions = createElement("div", "qal-duplicate-actions");
-  const closeBtn = createElement("button", "qal-duplicate-action");
-  closeBtn.type = "button";
-  closeBtn.textContent = t("duplicates.closeAll");
-  const dismissBtn = createElement("button", "qal-duplicate-dismiss");
-  dismissBtn.type = "button";
-  dismissBtn.textContent = t("duplicates.dismiss");
-  actions.append(closeBtn, dismissBtn);
-  banner.append(text, actions);
-  container.insertBefore(banner, container.firstChild);
-}
-
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     renderResults,
@@ -295,6 +245,5 @@ if (typeof module !== "undefined" && module.exports) {
     renderSearchView,
     renderCommandResults,
     renderRecentTabs,
-    renderDuplicateBanner,
   };
 }
