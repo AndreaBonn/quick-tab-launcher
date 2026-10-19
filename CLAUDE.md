@@ -17,16 +17,26 @@ npm run test:coverage # Coverage
 
 ## Architettura
 
-- `src/search-utils.js` - Logica pura condivisa (zero dipendenze browser)
+- `src/search-utils.js` - Logica pura condivisa (zero dipendenze browser), incl. isPrivilegedUrl, extractDomain
 - `src/fuzzy.js` - Fuzzy matching per ricerca (fuzzyMatch, fuzzyScore, highlightFuzzyMatch)
 - `src/commands.js` - Registry comandi per command palette (COMMANDS, filterCommands)
-- `src/render-utils.js` - Rendering DOM (risultati, comandi, recenti, banner, vista raggruppata)
-- `src/config-storage.js` - Config defaults, merge, load/save
-- `src/i18n.js` - i18n con dizionario inline (it/en)
-- `background/background.js` - Bridge verso WebExtension API (tabs, bookmarks, history, sessions)
+- `src/render-utils.js` - Primitive DOM (elementi, favicon, riga risultato, selezione)
+- `src/render-views.js` - Viste: risultati flat/raggruppati, comandi, web search, recenti
+- `src/render-states.js` - Stati: empty, no-results con tip, loading, error
+- `src/panel-view.js` - Stato e operazioni DOM del pannello, condivise da launcher e popup
+- `src/panel-controller.js` + `src/panel-actions.js` - Ricerca, conferma, navigazione, tastiera condivise; le differenze launcher/popup passano dai 7 hook `PanelHooks` (mai if sul tipo di host, mai `document.querySelector`)
+- `src/config-storage.js` - Config defaults, merge, load/save, loadStoredConfig/applyConfigChange
+- `src/i18n.js` - i18n con dizionario inline (it/en); unica eccezione di dimensione, con tetto in eslint
+- `background/background.js` - Init e routing dei messaggi via tabella `MESSAGE_ROUTES`
+- `background/search.js` - Ricerca su tabs, bookmarks, history, full-text
+- `background/navigation.js` - Navigazione, web search, chiusura tab
 - `background/tab-commands.js` - Esecuzione comandi tab (close, mute, pin, sort, duplicates)
-- `content/launcher.js` - IIFE che crea Shadow DOM closed con overlay UI
+- `content/launcher.js` - IIFE host del pannello in Shadow DOM closed
+- `content/launcher-dom.js` - Costruzione del DOM dell'overlay
+- `content/duplicates-banner.js` - Banner duplicati (firma, dismiss, chiusura, render)
 - `content/launcher.css` - Stili caricati via `browser.runtime.getURL()` nel shadow root
+- `popup/popup.js` - Host sottile del pannello condiviso (fallback su pagine privilegiate)
+- `options/options.js` + `options/options-shortcut.js` - Form impostazioni e cattura scorciatoia
 
 ## Feature
 
@@ -48,7 +58,10 @@ npm run test:coverage # Coverage
 - Manifest V2 (Firefox non supporta pienamente MV3)
 - Tutti i moduli `src/*.js` espongono tramite `module.exports` per test e come global per browser
 - Config dev files: `.mjs` extension (ESM) per evitare conflitti col CJS dei sorgenti
-- Ordine script nel manifest: config-storage, search-utils, fuzzy, i18n, commands, [tab-commands,] render-utils/background, launcher
+- Ordine script: fonte unica in `manifest.json` e negli `.html`; i loader dei test lo derivano da lì e `tests/load-order.test.js` verifica file esistenti, globali definiti prima dell'uso e nessuna `const` top-level duplicata (i classic script condividono lo scope). Un modulo nuovo va aggiunto lì, non nei test
+- Limiti in ESLint (300 righe file, 30 per funzione, 4 parametri, depth 3, no-undef) senza override, salvo il tetto su i18n.js
+- Coverage con soglie in `vitest.config.mjs` appena sotto il misurato: non si abbassano
+- Compatibilità: `strict_min_version` 91, niente API più recenti (es. `Object.hasOwn` è Firefox 92)
 
 ## Test
 
