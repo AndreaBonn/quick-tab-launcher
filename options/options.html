@@ -14,28 +14,51 @@
             <h1 class="qal-options-title" data-i18n="options.title"></h1>
             <p class="qal-options-subtitle" data-i18n="options.subtitle"></p>
           </div>
-          <div class="qal-locale-switcher" id="qal-locale-switcher">
-            <button
-              type="button"
-              class="qal-locale-btn"
-              data-locale="it"
-              title="Italiano"
-            >
-              &#x1F1EE;&#x1F1F9;
-            </button>
-            <button
-              type="button"
-              class="qal-locale-btn"
-              data-locale="en"
-              title="English"
-            >
-              &#x1F1FA;&#x1F1F8;
-            </button>
+          <div class="qal-locale-field">
+            <label
+              class="qal-options-hint"
+              for="qal-locale-select"
+              data-i18n="options.label.language"
+            ></label>
+            <select class="qal-locale-select" id="qal-locale-select">
+              <option value="auto" data-i18n="options.language.auto"></option>
+              <option value="it" data-i18n="options.language.it"></option>
+              <option value="en" data-i18n="options.language.en"></option>
+            </select>
           </div>
         </div>
       </header>
 
       <main>
+        <section class="qal-shortcut" aria-labelledby="qal-shortcut-title">
+          <p class="qal-shortcut-text">
+            <span
+              id="qal-shortcut-title"
+              data-i18n="options.shortcut.title"
+            ></span>
+            <span class="qal-shortcut-keys" id="qal-shortcut-keys"></span>
+          </p>
+          <div class="qal-shortcut-actions">
+            <button
+              type="button"
+              class="qal-options-btn qal-options-btn--secondary"
+              id="qal-shortcut-change"
+              data-i18n="options.shortcut.change"
+            ></button>
+            <button
+              type="button"
+              class="qal-options-btn qal-options-btn--link"
+              id="qal-shortcut-reset"
+              data-i18n="options.shortcut.reset"
+            ></button>
+          </div>
+          <p
+            class="qal-shortcut-status"
+            id="qal-shortcut-status"
+            aria-live="polite"
+          ></p>
+        </section>
+
         <form id="qal-options-form" class="qal-options-form" novalidate>
           <fieldset class="qal-options-fieldset">
             <legend
@@ -114,34 +137,20 @@
               >
                 <input
                   type="checkbox"
-                  class="qal-options-checkbox"
+                  class="qal-options-checkbox qal-switch"
                   id="qal-enable-fulltext-search"
+                  role="switch"
                 />
                 <span data-i18n="options.label.fulltextSearch"></span>
                 <span
                   class="qal-options-hint"
                   data-i18n="options.hint.fulltextSearch"
                 ></span>
-              </label>
-            </div>
-
-            <div class="qal-options-field">
-              <label class="qal-options-label" for="qal-debounce-ms">
-                <span data-i18n="options.label.debounce"></span>
                 <span
                   class="qal-options-hint"
-                  data-i18n="options.hint.debounce"
+                  data-i18n="options.hint.fulltextPrivacy"
                 ></span>
               </label>
-              <input
-                class="qal-options-input"
-                id="qal-debounce-ms"
-                type="number"
-                min="0"
-                max="2000"
-                step="10"
-                required
-              />
             </div>
 
             <div class="qal-options-field">
@@ -163,43 +172,69 @@
               />
             </div>
 
-            <div class="qal-options-field">
-              <label class="qal-options-label" for="qal-min-query-length">
-                <span data-i18n="options.label.minQueryLength"></span>
+            <details class="qal-advanced">
+              <summary class="qal-advanced-summary">
+                <span data-i18n="options.legend.advanced"></span>
                 <span
                   class="qal-options-hint"
-                  data-i18n="options.hint.minQueryLength"
+                  data-i18n="options.hint.advanced"
                 ></span>
-              </label>
-              <input
-                class="qal-options-input"
-                id="qal-min-query-length"
-                type="number"
-                min="1"
-                max="10"
-                step="1"
-                required
-              />
-            </div>
-
-            <div class="qal-options-field">
-              <label class="qal-options-label" for="qal-loading-threshold-ms">
-                <span data-i18n="options.label.loadingThreshold"></span>
-                <span
-                  class="qal-options-hint"
-                  data-i18n="options.hint.loadingThreshold"
-                ></span>
-              </label>
-              <input
-                class="qal-options-input"
-                id="qal-loading-threshold-ms"
-                type="number"
-                min="0"
-                max="5000"
-                step="50"
-                required
-              />
-            </div>
+              </summary>
+              <div class="qal-options-field">
+                <label class="qal-options-label" for="qal-debounce-ms">
+                  <span data-i18n="options.label.debounce"></span>
+                  <span
+                    class="qal-options-hint"
+                    data-i18n="options.hint.debounce"
+                  ></span>
+                </label>
+                <input
+                  class="qal-options-input"
+                  id="qal-debounce-ms"
+                  type="number"
+                  min="0"
+                  max="2000"
+                  step="10"
+                  required
+                />
+              </div>
+              <div class="qal-options-field">
+                <label class="qal-options-label" for="qal-min-query-length">
+                  <span data-i18n="options.label.minQueryLength"></span>
+                  <span
+                    class="qal-options-hint"
+                    data-i18n="options.hint.minQueryLength"
+                  ></span>
+                </label>
+                <input
+                  class="qal-options-input"
+                  id="qal-min-query-length"
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="1"
+                  required
+                />
+              </div>
+              <div class="qal-options-field">
+                <label class="qal-options-label" for="qal-loading-threshold-ms">
+                  <span data-i18n="options.label.loadingThreshold"></span>
+                  <span
+                    class="qal-options-hint"
+                    data-i18n="options.hint.loadingThreshold"
+                  ></span>
+                </label>
+                <input
+                  class="qal-options-input"
+                  id="qal-loading-threshold-ms"
+                  type="number"
+                  min="0"
+                  max="5000"
+                  step="50"
+                  required
+                />
+              </div>
+            </details>
           </fieldset>
 
           <p
@@ -210,12 +245,6 @@
 
           <div class="qal-options-actions">
             <button
-              type="submit"
-              class="qal-options-btn qal-options-btn--primary"
-              id="qal-save-btn"
-              data-i18n="options.btn.save"
-            ></button>
-            <button
               type="button"
               class="qal-options-btn qal-options-btn--secondary"
               id="qal-reset-btn"
@@ -224,10 +253,18 @@
           </div>
         </form>
       </main>
+
+      <footer class="qal-options-footer">
+        <span data-i18n="options.footer"></span>
+        <a href="https://github.com/AndreaBonn" target="_blank" rel="noopener"
+          >Bonn</a
+        >
+      </footer>
     </div>
 
     <script src="../src/config-storage.js"></script>
     <script src="../src/i18n.js"></script>
+    <script src="../src/shortcut.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

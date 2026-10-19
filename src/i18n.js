@@ -73,9 +73,8 @@ const I18N_MESSAGES = {
     "options.label.loadingThreshold": "Soglia indicatore caricamento (ms)",
     "options.hint.loadingThreshold":
       "Attesa prima di mostrare l'indicatore di caricamento (0-5000)",
-    "options.btn.save": "Salva impostazioni",
     "options.btn.reset": "Ripristina predefiniti",
-    "options.feedback.saved": "Impostazioni salvate.",
+    "options.feedback.saved": "Salvato.",
     "options.feedback.invalid": "Valori non validi. Controlla i campi.",
     "options.feedback.reset":
       "Impostazioni ripristinate ai valori predefiniti.",
@@ -150,6 +149,26 @@ const I18N_MESSAGES = {
     "launcher.settings": "Impostazioni",
     "hints.closeTab": "chiudi scheda",
     "hints.undo": "annulla",
+    "options.label.language": "Lingua",
+    "options.language.auto": "Automatica (lingua di Firefox)",
+    "options.language.it": "Italiano",
+    "options.language.en": "English",
+    "options.shortcut.title": "Apri il launcher con",
+    "options.shortcut.change": "Cambia scorciatoia",
+    "options.shortcut.prompt": "Premi la nuova combinazione, Esc per annullare",
+    "options.shortcut.reset": "Ripristina",
+    "options.shortcut.saved": "Scorciatoia aggiornata.",
+    "options.shortcut.invalid":
+      "Usa Ctrl o Alt insieme a una lettera, un numero o un tasto funzione.",
+    "options.shortcut.failed": "Firefox non ha accettato questa combinazione.",
+    "options.shortcut.none": "nessuna scorciatoia",
+    "keys.space": "Spazio",
+    "options.legend.advanced": "Avanzate",
+    "options.hint.advanced":
+      "Ritardo della ricerca, caratteri minimi, indicatore di caricamento",
+    "options.hint.fulltextPrivacy":
+      "Il testo viene letto sul tuo computer e non lascia il browser.",
+    "options.footer": "Quick Tab Launcher by",
   },
   en: {
     "launcher.placeholder": "Search tabs, bookmarks, history, or > actions",
@@ -216,9 +235,8 @@ const I18N_MESSAGES = {
     "options.label.loadingThreshold": "Loading indicator threshold (ms)",
     "options.hint.loadingThreshold":
       "Wait before showing loading indicator (0-5000)",
-    "options.btn.save": "Save settings",
     "options.btn.reset": "Restore defaults",
-    "options.feedback.saved": "Settings saved.",
+    "options.feedback.saved": "Saved.",
     "options.feedback.invalid": "Invalid values. Check fields.",
     "options.feedback.reset": "Settings restored to defaults.",
     "hints.go": "go to tab",
@@ -290,6 +308,26 @@ const I18N_MESSAGES = {
     "launcher.settings": "Settings",
     "hints.closeTab": "close tab",
     "hints.undo": "undo",
+    "options.label.language": "Language",
+    "options.language.auto": "Automatic (Firefox language)",
+    "options.language.it": "Italiano",
+    "options.language.en": "English",
+    "options.shortcut.title": "Open the launcher with",
+    "options.shortcut.change": "Change shortcut",
+    "options.shortcut.prompt": "Press the new key combination, Esc to cancel",
+    "options.shortcut.reset": "Reset",
+    "options.shortcut.saved": "Shortcut updated.",
+    "options.shortcut.invalid":
+      "Use Ctrl or Alt together with a letter, a digit or a function key.",
+    "options.shortcut.failed": "Firefox did not accept this combination.",
+    "options.shortcut.none": "no shortcut",
+    "keys.space": "Space",
+    "options.legend.advanced": "Advanced",
+    "options.hint.advanced":
+      "Search delay, minimum characters, loading indicator",
+    "options.hint.fulltextPrivacy":
+      "Page text is read on your computer and never leaves the browser.",
+    "options.footer": "Quick Tab Launcher by",
   },
 };
 

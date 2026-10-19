@@ -1,4 +1,12 @@
-/* global browser, QAL_CONFIG_DEFAULTS, CONFIG_STORAGE_KEY, mergeWithDefaults, t, loadLocale, setLocale, getLocale, applyTranslations, onLocaleChange */
+/* global browser, QAL_CONFIG_DEFAULTS, CONFIG_STORAGE_KEY, mergeWithDefaults, t, loadLocale, setLocale, clearLocale, getLocalePreference, applyTranslations, onLocaleChange, buildShortcut, shortcutToKeys */
+
+const TOGGLE_COMMAND = "toggle-launcher";
+const AUTOSAVE_DELAY_MS = 400;
+const IS_MAC = /mac/i.test(navigator.platform || "");
+
+let autosaveTimeout = null;
+let currentShortcut = "";
+let isCapturingShortcut = false;
 
 const FIELD_MAP = [
   {
@@ -90,26 +98,153 @@ function showFeedback(message, isError = false) {
   }, 3000);
 }
 
-function updateLocaleSwitcher() {
-  const current = getLocale();
-  const buttons = document.querySelectorAll(".qal-locale-btn");
-  for (const btn of buttons) {
-    btn.classList.toggle(
-      "qal-locale-btn--active",
-      btn.dataset.locale === current,
-    );
+function updateLocaleSelect() {
+  const select = document.getElementById("qal-locale-select");
+  if (select) select.value = getLocalePreference();
+}
+
+function setupLocaleSelect() {
+  const select = document.getElementById("qal-locale-select");
+  if (!select) return;
+  select.addEventListener("change", async () => {
+    if (select.value === "auto") await clearLocale();
+    else await setLocale(select.value);
+  });
+  updateLocaleSelect();
+}
+
+function markInvalidFields(values) {
+  for (const field of FIELD_MAP) {
+    if (field.type === "checkbox") continue;
+    const input = document.getElementById(field.inputId);
+    if (!input) continue;
+    const val = values[field.configKey];
+    const isValid =
+      Number.isFinite(val) && val >= field.min && val <= field.max;
+    input.toggleAttribute("aria-invalid", !isValid);
   }
 }
 
-function setupLocaleSwitcher() {
-  const switcher = document.getElementById("qal-locale-switcher");
-  if (!switcher) return;
-  switcher.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".qal-locale-btn");
-    if (!btn) return;
-    await setLocale(btn.dataset.locale);
-  });
-  updateLocaleSwitcher();
+async function autosave() {
+  const values = readFormValues();
+  markInvalidFields(values);
+  if (!validateValues(values)) {
+    showFeedback(t("options.feedback.invalid"), true);
+    return;
+  }
+  await browser.storage.local.set({ [CONFIG_STORAGE_KEY]: values });
+  showFeedback(t("options.feedback.saved"));
+}
+
+function scheduleAutosave() {
+  clearTimeout(autosaveTimeout);
+  autosaveTimeout = setTimeout(autosave, AUTOSAVE_DELAY_MS);
+}
+
+function renderShortcut() {
+  const container = document.getElementById("qal-shortcut-keys");
+  if (!container) return;
+  container.textContent = "";
+  const keys = shortcutToKeys(currentShortcut, IS_MAC, t("keys.space"));
+  if (keys.length === 0) {
+    container.textContent = t("options.shortcut.none");
+    return;
+  }
+  for (const key of keys) {
+    const kbd = document.createElement("kbd");
+    kbd.className = "qal-kbd";
+    kbd.textContent = key;
+    container.appendChild(kbd);
+  }
+}
+
+function setShortcutStatus(message, isError = false) {
+  const status = document.getElementById("qal-shortcut-status");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("qal-shortcut-status--error", isError);
+}
+
+async function loadShortcut() {
+  try {
+    const commands = await browser.commands.getAll();
+    currentShortcut =
+      commands.find((c) => c.name === TOGGLE_COMMAND)?.shortcut || "";
+  } catch (err) {
+    console.warn("Quick TAB Launcher: shortcut unavailable", err);
+  }
+  renderShortcut();
+}
+
+function stopCapture() {
+  isCapturingShortcut = false;
+  document.removeEventListener("keydown", captureShortcut, true);
+  document
+    .getElementById("qal-shortcut-change")
+    ?.removeAttribute("aria-pressed");
+}
+
+async function applyShortcut(shortcut) {
+  try {
+    await browser.commands.update({ name: TOGGLE_COMMAND, shortcut });
+    currentShortcut = shortcut;
+    renderShortcut();
+    setShortcutStatus(t("options.shortcut.saved"));
+    browser.runtime.sendMessage({ action: "refresh-action-title" });
+  } catch (err) {
+    console.warn("Quick TAB Launcher: shortcut update failed", err);
+    setShortcutStatus(t("options.shortcut.failed"), true);
+  }
+}
+
+function captureShortcut(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.key === "Escape") {
+    stopCapture();
+    setShortcutStatus("");
+    return;
+  }
+  const result = buildShortcut(event, IS_MAC);
+  if (result.pending) return;
+  if (result.error) {
+    setShortcutStatus(t("options.shortcut.invalid"), true);
+    return;
+  }
+  stopCapture();
+  applyShortcut(result.shortcut);
+}
+
+function startCapture() {
+  if (isCapturingShortcut) return;
+  isCapturingShortcut = true;
+  document
+    .getElementById("qal-shortcut-change")
+    ?.setAttribute("aria-pressed", "true");
+  setShortcutStatus(t("options.shortcut.prompt"));
+  document.addEventListener("keydown", captureShortcut, true);
+}
+
+async function resetShortcut() {
+  try {
+    await browser.commands.reset(TOGGLE_COMMAND);
+    await loadShortcut();
+    setShortcutStatus(t("options.shortcut.saved"));
+    browser.runtime.sendMessage({ action: "refresh-action-title" });
+  } catch (err) {
+    console.warn("Quick TAB Launcher: shortcut reset failed", err);
+    setShortcutStatus(t("options.shortcut.failed"), true);
+  }
+}
+
+function setupShortcut() {
+  document
+    .getElementById("qal-shortcut-change")
+    ?.addEventListener("click", startCapture);
+  document
+    .getElementById("qal-shortcut-reset")
+    ?.addEventListener("click", resetShortcut);
+  loadShortcut();
 }
 
 async function loadSettings() {
@@ -139,17 +274,23 @@ async function resetDefaults() {
 document.addEventListener("DOMContentLoaded", async () => {
   await loadLocale();
   applyTranslations(document);
-  setupLocaleSwitcher();
+  setupLocaleSelect();
+  setupShortcut();
   loadSettings();
 
   const form = document.getElementById("qal-options-form");
-  if (form) form.addEventListener("submit", saveSettings);
+  if (form) {
+    form.addEventListener("submit", saveSettings);
+    form.addEventListener("input", scheduleAutosave);
+    form.addEventListener("change", scheduleAutosave);
+  }
 
   const resetBtn = document.getElementById("qal-reset-btn");
   if (resetBtn) resetBtn.addEventListener("click", resetDefaults);
 
   onLocaleChange(() => {
     applyTranslations(document);
-    updateLocaleSwitcher();
+    updateLocaleSelect();
+    renderShortcut();
   });
 });
